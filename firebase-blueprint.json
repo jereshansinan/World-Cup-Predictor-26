@@ -1,0 +1,115 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile containing points and supported teams",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The unique Firebase Auth User UID"
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the user"
+        },
+        "supportedTeams": {
+          "type": "array",
+          "description": "An array of 3 teams supported by the user"
+        },
+        "totalPoints": {
+          "type": "integer",
+          "description": "The cumulative score including predictions and team penalties"
+        },
+        "authUid": {
+          "type": "string",
+          "description": "The unique Firebase Auth authentication identifier"
+        },
+        "pin": {
+          "type": "string",
+          "description": "The 4-digit numeric PIN for secure login fallback"
+        }
+      },
+      "required": ["id", "name", "supportedTeams", "totalPoints"]
+    },
+    "Match": {
+      "title": "Match",
+      "description": "A World Cup match fixture",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the match"
+        },
+        "homeTeam": {
+          "type": "string",
+          "description": "Name of the home team"
+        },
+        "awayTeam": {
+          "type": "string",
+          "description": "Name of the away team"
+        },
+        "matchDate": {
+          "type": "string",
+          "description": "Date and optionally time of kickoff"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["upcoming", "finished"],
+          "description": "Current status of the match"
+        },
+        "homeScoreActual": {
+          "type": "integer",
+          "description": "Actual goals scored by home team"
+        },
+        "awayScoreActual": {
+          "type": "integer",
+          "description": "Actual goals scored by away team"
+        }
+      },
+      "required": ["id", "homeTeam", "awayTeam", "matchDate", "status"]
+    },
+    "Prediction": {
+      "title": "Prediction",
+      "description": "A user's score prediction for a match",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The UID of the user who made the prediction"
+        },
+        "matchId": {
+          "type": "string",
+          "description": "The ID of the match predicted"
+        },
+        "homeScorePredicted": {
+          "type": "integer",
+          "description": "Predicted goals for the home team"
+        },
+        "awayScorePredicted": {
+          "type": "integer",
+          "description": "Predicted goals for the away team"
+        },
+        "pointsEarned": {
+          "type": "integer",
+          "description": "Calculated points earned for this prediction"
+        }
+      },
+      "required": ["userId", "matchId", "homeScorePredicted", "awayScorePredicted", "pointsEarned"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "Accessing and storing user details"
+    },
+    "matches/{matchId}": {
+      "schema": "Match",
+      "description": "Accessing and storing World Cup fixtures"
+    },
+    "predictions/{predictionId}": {
+      "schema": "Prediction",
+      "description": "Accessing and storing prediction documents"
+    }
+  }
+}
