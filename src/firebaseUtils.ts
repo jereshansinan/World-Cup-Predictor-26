@@ -362,6 +362,7 @@ export async function syncScoresAndPoints(): Promise<any> {
     // Iterate through ALL matches from dbMatches to find all completed match outcomes for supporter bonuses and penalties.
     const teamWinCounts: { [teamName: string]: number } = {};
     const teamLossCounts: { [teamName: string]: number } = {};
+    const teamDrawCounts: { [teamName: string]: number } = {};
 
     for (const matchId of Object.keys(dbMatches)) {
       const match = dbMatches[matchId];
@@ -372,6 +373,10 @@ export async function syncScoresAndPoints(): Promise<any> {
         } else if (match.awayScoreActual > match.homeScoreActual) {
           teamWinCounts[match.awayTeam] = (teamWinCounts[match.awayTeam] || 0) + 1;
           teamLossCounts[match.homeTeam] = (teamLossCounts[match.homeTeam] || 0) + 1;
+        } else {
+          // Both teams draw
+          teamDrawCounts[match.homeTeam] = (teamDrawCounts[match.homeTeam] || 0) + 1;
+          teamDrawCounts[match.awayTeam] = (teamDrawCounts[match.awayTeam] || 0) + 1;
         }
       }
     }
@@ -381,7 +386,7 @@ export async function syncScoresAndPoints(): Promise<any> {
       const userId = user.id; // Sanjay or sanjay etc.
       const stats = userStatsMap[userId] || { correctOutcomes: 0, exactScores: 0, points: 0 };
 
-      // Count user's supported teams losing and winning
+      // Count user's supported teams losing, winning, and drawing
       let penalties = 0;
       let bonuses = 0;
       const supported: string[] = user.supportedTeams || [];
@@ -391,6 +396,9 @@ export async function syncScoresAndPoints(): Promise<any> {
         }
         if (teamWinCounts[team]) {
           bonuses += teamWinCounts[team] * 2; // +2 points per win
+        }
+        if (teamDrawCounts[team]) {
+          bonuses += teamDrawCounts[team] * 1; // +1 point per draw
         }
       }
 
