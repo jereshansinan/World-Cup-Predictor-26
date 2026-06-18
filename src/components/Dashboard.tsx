@@ -4,7 +4,7 @@ import { collection, onSnapshot, doc, setDoc, query, where, getDoc } from 'fireb
 import { db, OperationType, handleFirestoreError } from '../firebase';
 import { syncScoresAndPoints } from '../firebaseUtils';
 import { MatchFixture, Prediction } from '../types';
-import { TEAM_FLAGS, isMatchLocked, formatNiceDate } from '../utils';
+import { TEAM_FLAGS, isMatchLocked, formatNiceDate, getTeamFlagUrl } from '../utils';
 import { Shield, Clock, Lock, Trophy, Plus, Minus, CheckCircle, AlertTriangle, RefreshCw, Loader2 } from 'lucide-react';
 
 interface DashboardProps {
@@ -18,8 +18,11 @@ export function Dashboard({ userProfile }: DashboardProps) {
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<{ [matchId: string]: 'saved' | 'saving' | 'error' | null }>({});
 
-  const userId = userProfile.id; // e.g. "sanjay"
-  const supportedTeams: string[] = userProfile.supportedTeams || [];
+  const [searchTeam, setSearchTeam] = useState('');
+  const [selectedDate, setSelectedDate] = useState('');
+
+  const userId = (userProfile?.id || userProfile?.name || '').toLowerCase();
+  const supportedTeams: string[] = userProfile?.supportedTeams || [];
 
   // Admin Sync states
   const [isSyncing, setIsSyncing] = useState(false);
@@ -53,8 +56,13 @@ export function Dashboard({ userProfile }: DashboardProps) {
       snapshot.forEach((doc) => {
         list.push(doc.data() as MatchFixture);
       });
-      // Sort matches chronologically
-      list.sort((a, b) => new Date(a.matchDate).getTime() - new Date(b.matchDate).getTime());
+      // Sort matches in reverse chronological order so first played matches go to the bottom
+      list.sort((a, b) => {
+        const timeDiff = new Date(b.matchDate).getTime() - new Date(a.matchDate).getTime();
+        if (timeDiff !== 0) return timeDiff;
+        // If identical dates, sort by ID descending so chronologically earlier match stays lower
+        return b.id.localeCompare(a.id);
+      });
       setFixtures(list);
       setLoading(false);
     }, (error) => {
@@ -66,6 +74,7 @@ export function Dashboard({ userProfile }: DashboardProps) {
 
   // Listen to predictions of the logged in user
   useEffect(() => {
+    if (!userId) return;
     const qPredictions = query(collection(db, 'predictions'), where('userId', '==', userId));
     const unsubscribe = onSnapshot(qPredictions, (snapshot) => {
       const preds: { [matchId: string]: Prediction } = {};
@@ -138,6 +147,19 @@ export function Dashboard({ userProfile }: DashboardProps) {
       setSaveStatus({ ...saveStatus, [matchId]: 'error' });
     }
   };
+
+  const filteredFixtures = fixtures.filter((match) => {
+    const matchesTeam = searchTeam
+      ? match.homeTeam.toLowerCase().includes(searchTeam.toLowerCase()) ||
+        match.awayTeam.toLowerCase().includes(searchTeam.toLowerCase())
+      : true;
+
+    const matchesDate = selectedDate
+      ? match.matchDate === selectedDate
+      : true;
+
+    return matchesTeam && matchesDate;
+  });
 
   return (
     <div className="space-y-6" id="predictions_dashboard_container">
@@ -224,8 +246,8 @@ export function Dashboard({ userProfile }: DashboardProps) {
               className="bg-black/35 border border-white/5 p-3 rounded-xl flex flex-col items-center justify-center text-center shadow-md relative"
               id={`supported_team_${idx}`}
             >
-              <div className="text-2xl sm:text-3xl mb-1 filter drop-shadow">
-                {TEAM_FLAGS[team] || '🏳️'}
+              <div className="mb-2 filter drop-shadow shrink-0">
+                <img src={getTeamFlagUrl(team)} alt={team} className="w-10 h-7 object-cover rounded shadow-md border border-white/10" referrerPolicy="no-referrer" />
               </div>
               <span className="font-display font-bold text-xs sm:text-sm text-white block truncate max-w-full">
                 {team}
@@ -240,7 +262,7 @@ export function Dashboard({ userProfile }: DashboardProps) {
 
       {/* Scrollable match fixtures section */}
       <div>
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
           <div>
             <h2 className="font-display text-2xl sm:text-3xl font-bold text-white uppercase tracking-tight">
               Fixture Board
@@ -249,9 +271,56 @@ export function Dashboard({ userProfile }: DashboardProps) {
               Enter scores to predict results. Predictions close on match dates.
             </p>
           </div>
-          <div className="text-right text-[11px] text-[#ffb703] font-display uppercase tracking-wider flex items-center gap-1.5 bg-black/40 px-3.5 py-1.5 border border-white/10 rounded-full">
+          <div className="text-right text-[11px] text-[#ffb703] font-display uppercase tracking-wider flex items-center gap-1.5 bg-black/40 px-3.5 py-1.5 border border-[#ffb703]/20 rounded-full">
             <Clock className="w-3.5 h-3.5 text-[#ffb703] animate-pulse" /> Final Reckoning System
           </div>
+        </div>
+
+        {/* Dynamic Search & Date Filters */}
+        <div className="bg-zinc-950/40 p-4 rounded-xl border border-white/5 flex flex-col sm:flex-row gap-3 items-end mb-4" id="fixtures_filter_panel">
+          <div className="flex-1 w-full">
+            <label className="block text-[10px] uppercase font-mono tracking-widest text-[#ffb703] mb-1">Search squad/team</label>
+            <input
+              type="text"
+              placeholder="e.g. Spain, South Africa..."
+              value={searchTeam}
+              onChange={(e) => setSearchTeam(e.target.value)}
+              className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#ffb703] transition"
+              id="filter_team_input"
+            />
+          </div>
+          <div className="w-full sm:w-48">
+            <label className="block text-[10px] uppercase font-mono tracking-widest text-[#ffb703] mb-1">Filter by date</label>
+            <select
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-[#ffb703] transition cursor-pointer"
+              id="filter_date_select"
+            >
+              <option value="" className="bg-zinc-900">📅 All dates</option>
+              {(Array.from(new Set(fixtures.map(f => f.matchDate))) as string[])
+                .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
+                .map(date => (
+                  <option key={date} value={date} className="bg-zinc-900">
+                    {date}
+                  </option>
+                ))
+              }
+            </select>
+          </div>
+          {(searchTeam || selectedDate) && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearchTeam('');
+                setSelectedDate('');
+              }}
+              className="w-full sm:w-auto px-4 py-2 bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-900 text-zinc-300 rounded-lg text-xs font-mono uppercase tracking-widest border border-white/5 cursor-pointer transition"
+              id="reset_filters_btn"
+            >
+              Clear
+            </button>
+          )}
         </div>
 
         {loading ? (
@@ -261,7 +330,23 @@ export function Dashboard({ userProfile }: DashboardProps) {
           </div>
         ) : (
           <div className="fixtures-container-theme p-3 sm:p-5 max-h-[640px] overflow-y-auto space-y-3" id="fixtures_scroll_viewport">
-            {fixtures.map((match) => {
+            {filteredFixtures.length === 0 ? (
+              <div className="py-12 text-center text-white/50 border border-white/5 bg-zinc-950/20 rounded-xl flex flex-col items-center gap-3">
+                <AlertTriangle className="w-8 h-8 text-zinc-500" />
+                <span className="text-xs font-sans">No matches found for your search criteria.</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchTeam('');
+                    setSelectedDate('');
+                  }}
+                  className="px-4 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-white/10 rounded-lg text-xs text-white uppercase font-mono tracking-wider cursor-pointer transition"
+                >
+                  Reset filters
+                </button>
+              </div>
+            ) : (
+              filteredFixtures.map((match) => {
               const prediction = predictions[match.id];
               const isLockedByTime = isMatchLocked(match.matchDate, match.status);
               const isUserLocked = prediction?.locked === true;
@@ -323,8 +408,8 @@ export function Dashboard({ userProfile }: DashboardProps) {
                   <div className="grid grid-cols-12 gap-1.5 items-center">
                     {/* Home Team */}
                     <div className="col-span-4 text-center md:text-right flex flex-col md:flex-row-reverse items-center justify-center md:justify-start gap-2">
-                      <div className="text-2xl sm:text-3xl filter drop-shadow">
-                        {TEAM_FLAGS[match.homeTeam] || '🏳️'}
+                      <div className="filter drop-shadow shrink-0">
+                        <img src={getTeamFlagUrl(match.homeTeam)} alt={match.homeTeam} className="w-8 h-5.5 object-cover rounded shadow-md border border-white/10" referrerPolicy="no-referrer" />
                       </div>
                       <div className="text-center md:text-right min-w-0">
                         <span className="font-display font-bold text-xs sm:text-sm text-white block truncate">
@@ -423,8 +508,8 @@ export function Dashboard({ userProfile }: DashboardProps) {
 
                     {/* Away Team */}
                     <div className="col-span-4 text-center md:text-left flex flex-col md:flex-row items-center justify-center md:justify-start gap-2">
-                      <div className="text-2xl sm:text-3xl filter drop-shadow">
-                        {TEAM_FLAGS[match.awayTeam] || '🏳️'}
+                      <div className="filter drop-shadow shrink-0">
+                        <img src={getTeamFlagUrl(match.awayTeam)} alt={match.awayTeam} className="w-8 h-5.5 object-cover rounded shadow-md border border-white/10" referrerPolicy="no-referrer" />
                       </div>
                       <div className="min-w-0">
                         <span className="font-display font-bold text-xs sm:text-sm text-white block truncate">
@@ -500,7 +585,8 @@ export function Dashboard({ userProfile }: DashboardProps) {
                   </div>
                 </div>
               );
-            })}
+            })
+            )}
           </div>
         )}
       </div>

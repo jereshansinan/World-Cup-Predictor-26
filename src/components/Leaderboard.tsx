@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db, OperationType, handleFirestoreError } from '../firebase';
 import { UserStats } from '../types';
-import { TEAM_FLAGS } from '../utils';
+import { TEAM_FLAGS, getTeamFlagUrl } from '../utils';
 import { Shield, Medal, Award, Flame, AlertTriangle } from 'lucide-react';
 
 export function Leaderboard() {
@@ -140,13 +140,14 @@ export function Leaderboard() {
                       <td className="py-3.5 px-4 text-center">
                         <div className="inline-flex gap-1.5 bg-black/40 p-1 rounded-lg border border-white/5">
                           {user.supportedTeams.map((team: string) => (
-                            <span
+                            <img
                               key={team}
-                              className="text-sm sm:text-base cursor-help filter drop-shadow hover:scale-115 transition"
+                              src={getTeamFlagUrl(team)}
+                              alt={team}
+                              className="w-5 h-3.5 object-cover rounded shadow-sm cursor-help filter drop-shadow hover:scale-115 transition shrink-0"
                               title={team}
-                            >
-                              {TEAM_FLAGS[team] || '🏳️'}
-                            </span>
+                              referrerPolicy="no-referrer"
+                            />
                           ))}
                         </div>
                       </td>

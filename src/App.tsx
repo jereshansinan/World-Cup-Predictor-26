@@ -8,7 +8,7 @@ import { Dashboard } from './components/Dashboard';
 import { Leaderboard } from './components/Leaderboard';
 import { Trophy, LogOut, Radio, User, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { TEAM_FLAGS } from './utils';
+import { TEAM_FLAGS, getTeamFlagUrl } from './utils';
 
 export default function App() {
   const [currentUserProfile, setCurrentUserProfile] = useState<any | null>(null);
@@ -45,14 +45,22 @@ export default function App() {
           
           unsubscribeProfile = onSnapshot(q, (snapshot) => {
             if (!snapshot.empty) {
-              setCurrentUserProfile(snapshot.docs[0].data());
+              const data = snapshot.docs[0].data();
+              if (data && !data.id) {
+                data.id = snapshot.docs[0].id; // Fallback to document key e.g "sanjay"
+              }
+              setCurrentUserProfile(data);
             } else {
               // Fallback - check if profile is already mapped by name portion key
               const emailPrefix = user.email?.split('@')[0] || '';
               const queryNameRef = query(collection(db, 'users'), where('id', '==', emailPrefix));
               getDocs(queryNameRef).then((nameSnap) => {
                 if (!nameSnap.empty) {
-                  setCurrentUserProfile(nameSnap.docs[0].data());
+                  const data = nameSnap.docs[0].data();
+                  if (data && !data.id) {
+                    data.id = nameSnap.docs[0].id;
+                  }
+                  setCurrentUserProfile(data);
                 } else {
                   setCurrentUserProfile(null);
                 }
@@ -157,8 +165,9 @@ export default function App() {
                 <div className="supporting-badge">Fave Squads</div>
                 <div className="teams-list">
                   {currentUserProfile.supportedTeams?.map((team: string) => (
-                    <span key={team} className="flag-pill flex items-center gap-1 bg-white/10 border border-white/15 px-2 py-0.5 rounded text-xs" title={team}>
-                      {TEAM_FLAGS[team]} {team}
+                    <span key={team} className="flag-pill flex items-center gap-1.5 bg-white/10 border border-white/15 px-2 py-1 rounded text-xs" title={team}>
+                      <img src={getTeamFlagUrl(team)} alt={team} className="w-4 h-3 object-cover rounded shadow-sm shrink-0" referrerPolicy="no-referrer" />
+                      {team}
                     </span>
                   ))}
                 </div>

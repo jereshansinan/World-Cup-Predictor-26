@@ -17,7 +17,7 @@ import {
 } from 'firebase/auth';
 import { db, auth, OperationType, handleFirestoreError } from './firebase';
 import { UserProfile, MatchFixture, Prediction, UserStats } from './types';
-import { SEED_USERS, SEED_MATCHES, SEED_PREDICTIONS } from './seed';
+import { SEED_USERS, SEED_MATCHES, SEED_PREDICTIONS, MATCH_ACTUAL_RESULTS } from './seed';
 
 /**
  * Seeds initial users, matches, and default predictions into Firestore if they don't exist.
@@ -28,115 +28,158 @@ export async function seedInitialData() {
   const predictionsPath = 'predictions';
 
   try {
-    // 1. Gather existing matches in Firestore
+    // 1. Gather existing data
     const matchesSnap = await getDocs(collection(db, matchesPath));
-    const existingMatchIds = new Set<string>();
-    matchesSnap.forEach((doc) => existingMatchIds.add(doc.id));
+    const usersSnap = await getDocs(collection(db, usersPath));
+    const predictionsSnap = await getDocs(collection(db, predictionsPath));
 
-    const matchesBatch = writeBatch(db);
-    let neededMatchCommit = false;
-
-    for (const match of SEED_MATCHES) {
-      const matchRef = doc(db, matchesPath, match.id);
-      if (!existingMatchIds.has(match.id)) {
-        // missing entirely, create it
-        matchesBatch.set(matchRef, {
-          id: match.id,
-          homeTeam: match.homeTeam,
-          awayTeam: match.awayTeam,
-          matchDate: match.matchDate,
-          status: 'upcoming',
-          homeScoreActual: null,
-          awayScoreActual: null
-        });
-        neededMatchCommit = true;
-      } else {
-        // match exists; merge/update matchDate just in case it has changed (e.g. Saudi Arabia / Iran tuesday change)
-        matchesBatch.set(matchRef, {
-          matchDate: match.matchDate
-        }, { merge: true });
-        neededMatchCommit = true;
+    const seedMatchIds = new Set(SEED_MATCHES.map((m) => m.id));
+    const seedUserIds = new Set(SEED_USERS.map((u) => u.name.toLowerCase()));
+    
+    const seedPredIds = new Set<string>();
+    for (const item of SEED_PREDICTIONS) {
+      for (const userName of Object.keys(item.predictions)) {
+        seedPredIds.add(`${userName.toLowerCase()}_${item.matchId}`);
       }
     }
 
-    if (neededMatchCommit) {
-      console.log('Syncing / seeding match dates and missing matches...');
+    // --- PHASE A: Matches batch ---
+    const matchesBatch = writeBatch(db);
+    let matchesBatchSize = 0;
+
+    const existingMatchIds = new Set<string>();
+    matchesSnap.forEach((docSnap) => {
+      existingMatchIds.add(docSnap.id);
+    });
+
+    // Delete matches not in seed
+    matchesSnap.forEach((docSnap) => {
+      if (!seedMatchIds.has(docSnap.id)) {
+        matchesBatch.delete(docSnap.ref);
+        matchesBatchSize++;
+      }
+    });
+
+    // Upsert matches in seed (if they don't already exist to preserve manual corrects)
+    for (const match of SEED_MATCHES) {
+      if (existingMatchIds.has(match.id)) {
+        continue;
+      }
+      const matchDocRef = doc(db, matchesPath, match.id);
+      const staticResult = MATCH_ACTUAL_RESULTS[match.id];
+      matchesBatch.set(matchDocRef, {
+        id: match.id,
+        homeTeam: match.homeTeam,
+        awayTeam: match.awayTeam,
+        matchDate: match.matchDate,
+        status: staticResult ? 'finished' : 'upcoming',
+        homeScoreActual: staticResult ? staticResult.home : null,
+        awayScoreActual: staticResult ? staticResult.away : null
+      });
+      matchesBatchSize++;
+    }
+
+    if (matchesBatchSize > 0) {
+      console.log(`Commiting matches updates batch (size: ${matchesBatchSize})...`);
       await matchesBatch.commit();
     }
 
-    // 2. See if any seeded users are missing
-    const usersSnap = await getDocs(collection(db, usersPath));
-    const existingUserIds = new Set<string>();
-    usersSnap.forEach((doc) => existingUserIds.add(doc.id));
-
+    // --- PHASE B: Users batch ---
     const usersBatch = writeBatch(db);
-    let neededUsersCommit = false;
+    let usersBatchSize = 0;
 
+    // Delete users not in seed
+    usersSnap.forEach((docSnap) => {
+      if (!seedUserIds.has(docSnap.id)) {
+        usersBatch.delete(docSnap.ref);
+        usersBatchSize++;
+      }
+    });
+
+    // Upsert users in seed
     for (const user of SEED_USERS) {
       const userId = user.name.toLowerCase();
-      if (!existingUserIds.has(userId)) {
-        const userRef = doc(db, usersPath, userId);
-        usersBatch.set(userRef, {
-          id: userId,
-          name: user.name,
-          supportedTeams: user.supportedTeams,
-          totalPoints: 0,
-          authUid: null
-        });
-        neededUsersCommit = true;
-      }
+      const userRef = doc(db, usersPath, userId);
+      // Merge with existing users to preserve authUid fields if they signed up
+      usersBatch.set(userRef, {
+        id: userId,
+        name: user.name,
+        supportedTeams: user.supportedTeams
+      }, { merge: true });
+      usersBatchSize++;
     }
 
-    if (neededUsersCommit) {
-      console.log('Seeding missing users...');
+    if (usersBatchSize > 0) {
+      console.log(`Commiting users updates batch (size: ${usersBatchSize})...`);
       await usersBatch.commit();
     }
 
-    // 3. Sync/seed missing predictions
-    const predictionsSnap = await getDocs(collection(db, predictionsPath));
-    const existingPredIds = new Set<string>();
-    predictionsSnap.forEach((doc) => existingPredIds.add(doc.id));
+    // --- PHASE C: Predictions batches (chunked to fit Firestore limits) ---
+    const commitChunk = async (operations: { ref: any; type: 'set' | 'delete'; data?: any }[]) => {
+      const b = writeBatch(db);
+      for (const op of operations) {
+        if (op.type === 'delete') {
+          b.delete(op.ref);
+        } else {
+          b.set(op.ref, op.data);
+        }
+      }
+      await b.commit();
+    };
 
-    const predsBatch = writeBatch(db);
-    let neededPredsCommit = false;
+    let pOperations: { ref: any; type: 'set' | 'delete'; data?: any }[] = [];
 
+    // Queue prediction deletions
+    predictionsSnap.forEach((docSnap) => {
+      if (!seedPredIds.has(docSnap.id)) {
+        pOperations.push({ ref: docSnap.ref, type: 'delete' });
+      }
+    });
+
+    // Queue predictions set
     for (const item of SEED_PREDICTIONS) {
       for (const [userName, predStr] of Object.entries(item.predictions)) {
         const userId = userName.toLowerCase();
         const predictionId = `${userId}_${item.matchId}`;
+        const predDocRef = doc(db, predictionsPath, predictionId);
 
-        if (!existingPredIds.has(predictionId)) {
-          const predDocRef = doc(db, predictionsPath, predictionId);
+        let homeScorePredicted: number | null = null;
+        let awayScorePredicted: number | null = null;
+        let isInitiallyLocked = false;
 
-          let homeScorePredicted: number | null = null;
-          let awayScorePredicted: number | null = null;
-
-          if (predStr && predStr !== 'null') {
-            const parts = predStr.split('-');
-            if (parts.length === 2) {
-              homeScorePredicted = parseInt(parts[0], 10);
-              awayScorePredicted = parseInt(parts[1], 10);
-            }
+        if (predStr && predStr !== 'null') {
+          const parts = predStr.split('-');
+          if (parts.length === 2) {
+            homeScorePredicted = parseInt(parts[0], 10);
+            awayScorePredicted = parseInt(parts[1], 10);
+            isInitiallyLocked = true;
           }
+        }
 
-          predsBatch.set(predDocRef, {
+        pOperations.push({
+          ref: predDocRef,
+          type: 'set',
+          data: {
             id: predictionId,
             userId: userId,
             matchId: item.matchId,
             homeScorePredicted,
             awayScorePredicted,
             pointsEarned: null,
-            locked: true
-          });
-          neededPredsCommit = true;
-        }
+            locked: isInitiallyLocked
+          }
+        });
       }
     }
 
-    if (neededPredsCommit) {
-      console.log('Seeding missing predictions...');
-      await predsBatch.commit();
+    // Execute prediction batches in chunks of 400
+    console.log(`Executing predictions updates operations (total: ${pOperations.length})...`);
+    while (pOperations.length > 0) {
+      const chunk = pOperations.splice(0, 400);
+      await commitChunk(chunk);
     }
+
+    console.log('Database synced & force-seeded with correct cohort list.');
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'seed');
   }
@@ -232,6 +275,14 @@ export async function syncScoresAndPoints(): Promise<any> {
 
     for (const matchId of Object.keys(dbMatches)) {
       const dbMatch = dbMatches[matchId];
+
+      // If the match in the database is already finished, do NOT edit or update it!
+      // This protects manual corrections the admin makes directly in the Firestore database.
+      if (dbMatch.status === 'finished') {
+        console.log(`Skipping sync update for already finished/previous match: ${matchId}`);
+        continue;
+      }
+
       let foundInApi = false;
 
       if (apiMatches && apiMatches.length > 0) {
@@ -274,16 +325,28 @@ export async function syncScoresAndPoints(): Promise<any> {
         }
       }
 
-      // Fallback if not found in API or fetch failed entirely
+      // Fallback if not found in API or fetch failed entirely. Use MATCH_ACTUAL_RESULTS if available.
       if (!foundInApi) {
-        updatedMatchesBatch.update(doc(db, matchesPath, matchId), {
-          status: 'upcoming',
-          homeScoreActual: null,
-          awayScoreActual: null
-        });
-        dbMatches[matchId].status = 'upcoming';
-        dbMatches[matchId].homeScoreActual = null;
-        dbMatches[matchId].awayScoreActual = null;
+        const staticResult = MATCH_ACTUAL_RESULTS[matchId];
+        if (staticResult) {
+          updatedMatchesBatch.update(doc(db, matchesPath, matchId), {
+            status: 'finished',
+            homeScoreActual: staticResult.home,
+            awayScoreActual: staticResult.away
+          });
+          dbMatches[matchId].status = 'finished';
+          dbMatches[matchId].homeScoreActual = staticResult.home;
+          dbMatches[matchId].awayScoreActual = staticResult.away;
+        } else {
+          updatedMatchesBatch.update(doc(db, matchesPath, matchId), {
+            status: 'upcoming',
+            homeScoreActual: null,
+            awayScoreActual: null
+          });
+          dbMatches[matchId].status = 'upcoming';
+          dbMatches[matchId].homeScoreActual = null;
+          dbMatches[matchId].awayScoreActual = null;
+        }
       }
     }
     
@@ -436,20 +499,26 @@ export async function loginByProfile(userName: string): Promise<any> {
   const userRef = doc(db, 'users', userId);
   
   try {
-    let authUser = auth.currentUser;
-    if (!authUser) {
-      const credential = await signInAnonymously(auth);
-      authUser = credential.user;
+    // Force sign out the current user session to assert a completely fresh anonymous user on every profile switch.
+    try {
+      await signOut(auth);
+    } catch (signOutError) {
+      console.warn('Signout warning (can be normal if not signed in):', signOutError);
     }
+
+    const credential = await signInAnonymously(auth);
+    const authUser = credential.user;
 
     const userDoc = await getDoc(userRef);
 
     if (userDoc.exists()) {
       const userData = userDoc.data();
+      // Record the fresh auth session UID to cleanly separate user predictions
       await updateDoc(userRef, {
         authUid: authUser.uid
       });
       return {
+        id: userId,
         ...userData,
         authUid: authUser.uid
       };
