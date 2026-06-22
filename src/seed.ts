@@ -308,23 +308,168 @@ export const SEED_PREDICTIONS: SeedPrediction[] = [
       Thapedi: '3-0', Fikile: '2-0', Jereshan: '2-0', Happy: '2-0', Alone: '2-0',
       Dylan: '3-1', Nandipha: '2-1'
     }
+  },
+  {
+    matchId: 'm30',
+    predictions: {
+      Sanjay: '1-2', Janita: '1-2', Hlaisani: '0-2', Vuyolwethu: '0-0', Tlamelo: '0-2',
+      Thapedi: '1-2', Fikile: '1-2', Jereshan: '1-2', Happy: '1-3', Alone: '0-1',
+      Dylan: '1-1', Nandipha: null
+    }
+  },
+  {
+    matchId: 'm31',
+    predictions: {
+      Sanjay: '3-0', Janita: '3-1', Hlaisani: '3-0', Vuyolwethu: '2-0', Tlamelo: '4-0',
+      Thapedi: '5-0', Fikile: '3-1', Jereshan: '4-0', Happy: '3-1', Alone: '3-0',
+      Dylan: '4-0', Nandipha: null
+    }
+  },
+  {
+    matchId: 'm32',
+    predictions: {
+      Sanjay: '2-1', Janita: '1-0', Hlaisani: '2-1', Vuyolwethu: '1-3', Tlamelo: '2-1',
+      Thapedi: '1-1', Fikile: '1-0', Jereshan: '2-0', Happy: '2-2', Alone: '2-1',
+      Dylan: '2-1', Nandipha: null
+    }
+  },
+  {
+    matchId: 'm33',
+    predictions: {
+      Sanjay: '2-1', Janita: '2-1', Hlaisani: '3-1', Vuyolwethu: '2-0', Tlamelo: '2-0',
+      Thapedi: '2-2', Fikile: '2-1', Jereshan: '2-1', Happy: '1-0', Alone: '0-0',
+      Dylan: '2-1', Nandipha: null
+    }
+  },
+  {
+    matchId: 'm34',
+    predictions: {
+      Sanjay: '3-1', Janita: '2-0', Hlaisani: '2-1', Vuyolwethu: '2-0', Tlamelo: '3-0',
+      Thapedi: '3-1', Fikile: '2-1', Jereshan: '4-1', Happy: '3-4', Alone: '3-1',
+      Dylan: '3-1', Nandipha: null
+    }
+  },
+  {
+    matchId: 'm35',
+    predictions: {
+      Sanjay: '2-0', Janita: '1-1', Hlaisani: '3-1', Vuyolwethu: null, Tlamelo: '2-1',
+      Thapedi: '2-0', Fikile: '2-0', Jereshan: '1-1', Happy: '1-0', Alone: '2-0',
+      Dylan: '3-0', Nandipha: null
+    }
+  },
+  {
+    matchId: 'm36',
+    predictions: {
+      Sanjay: '1-2', Janita: '0-2', Hlaisani: '1-1', Vuyolwethu: null, Tlamelo: '1-2',
+      Thapedi: '1-2', Fikile: '0-2', Jereshan: '1-0', Happy: '0-2', Alone: '1-2',
+      Dylan: '0-3', Nandipha: null
+    }
+  },
+  {
+    matchId: 'm37',
+    predictions: {
+      Sanjay: '4-0', Janita: '3-0', Hlaisani: '3-0', Vuyolwethu: null, Tlamelo: '2-0',
+      Thapedi: '4-0', Fikile: '3-0', Jereshan: '3-1', Happy: '3-1', Alone: '3-0',
+      Dylan: '3-0', Nandipha: null
+    }
+  },
+  {
+    matchId: 'm38',
+    predictions: {
+      Sanjay: '2-1', Janita: '2-0', Hlaisani: '2-1', Vuyolwethu: null, Tlamelo: '3-0',
+      Thapedi: '1-0', Fikile: '2-0', Jereshan: '2-1', Happy: '3-1', Alone: '2-1',
+      Dylan: '2-0', Nandipha: null
+    }
+  },
+  {
+    matchId: 'm39',
+    predictions: {
+      Sanjay: '2-0', Janita: '2-0', Hlaisani: '0-0', Vuyolwethu: null, Tlamelo: '1-0',
+      Thapedi: '1-1', Fikile: '1-0', Jereshan: '1-0', Happy: null, Alone: '2-0',
+      Dylan: '0-1', Nandipha: null
+    }
+  },
+  {
+    matchId: 'm40',
+    predictions: {
+      Sanjay: '1-2', Janita: '0-3', Hlaisani: '2-2', Vuyolwethu: null, Tlamelo: '0-1',
+      Thapedi: '1-1', Fikile: '1-1', Jereshan: '1-1', Happy: null, Alone: '1-1',
+      Dylan: '1-2', Nandipha: null
+    }
+  },
+  {
+    matchId: 'm41',
+    predictions: {
+      Sanjay: '4-1', Janita: '2-0', Hlaisani: '3-1', Vuyolwethu: '3-0', Tlamelo: '4-0',
+      Thapedi: '3-0', Fikile: '3-1', Jereshan: '3-0', Happy: '4-2', Alone: '2-0',
+      Dylan: '3-1', Nandipha: '3-1'
+    }
+  },
+  {
+    matchId: 'm42',
+    predictions: {
+      Sanjay: '4-0', Janita: '4-0', Hlaisani: '5-0', Vuyolwethu: '2-0', Tlamelo: '4-0',
+      Thapedi: '3-1', Fikile: '4-0', Jereshan: '4-0', Happy: '4-1', Alone: '3-0',
+      Dylan: '4-0', Nandipha: '4-0'
+    }
+  },
+  {
+    matchId: 'm43',
+    predictions: {
+      Sanjay: '3-1', Janita: null, Hlaisani: '2-2', Vuyolwethu: '0-1', Tlamelo: '1-2',
+      Thapedi: '1-0', Fikile: '2-1', Jereshan: '1-0', Happy: '1-2', Alone: '1-1',
+      Dylan: '2-1', Nandipha: '1-1'
+    }
+  },
+  {
+    matchId: 'm44',
+    predictions: {
+      Sanjay: '2-0', Janita: null, Hlaisani: '1-4', Vuyolwethu: '0-2', Tlamelo: '0-3',
+      Thapedi: '1-2', Fikile: '0-1', Jereshan: '0-1', Happy: '2-3', Alone: '1-3',
+      Dylan: '0-1', Nandipha: '2-0'
+    }
   }
 ];
 
 // Actual scores when finished
 export const MATCH_ACTUAL_RESULTS: { [matchId: string]: { home: number; away: number } } = {
   m1: { home: 2, away: 0 },
-  m2: { home: 1, away: 2 },
-  m3: { home: 2, away: 0 },
-  m4: { home: 2, away: 1 },
-  m5: { home: 1, away: 3 },
-  m6: { home: 1, away: 2 },
-  m7: { home: 2, away: 1 },
-  m8: { home: 0, away: 3 },
-  m9: { home: 2, away: 1 },
-  m10: { home: 4, away: 0 },
-  m11: { home: 2, away: 0 },
-  m12: { home: 2, away: 0 },
-  m14: { home: 3, away: 0 },
-  m16: { home: 2, away: 1 }
+  m2: { home: 2, away: 1 },
+  m3: { home: 1, away: 1 },
+  m4: { home: 4, away: 1 },
+  m5: { home: 0, away: 1 },
+  m6: { home: 2, away: 0 },
+  m7: { home: 1, away: 1 },
+  m8: { home: 1, away: 1 },
+  m9: { home: 1, away: 0 },
+  m10: { home: 7, away: 1 },
+  m11: { home: 2, away: 2 },
+  m12: { home: 5, away: 1 },
+  m13: { home: 1, away: 1 },
+  m14: { home: 0, away: 0 },
+  m15: { home: 2, away: 2 },
+  m16: { home: 1, away: 1 },
+  m17: { home: 3, away: 1 },
+  m18: { home: 1, away: 4 },
+  m19: { home: 3, away: 0 },
+  m20: { home: 3, away: 1 },
+  m21: { home: 1, away: 0 },
+  m22: { home: 4, away: 2 },
+  m23: { home: 1, away: 1 },
+  m24: { home: 1, away: 3 },
+  m25: { home: 1, away: 1 },
+  m26: { home: 4, away: 1 },
+  m27: { home: 6, away: 0 },
+  m29: { home: 2, away: 0 },
+  m30: { home: 0, away: 1 },
+  m31: { home: 3, away: 0 },
+  m32: { home: 0, away: 1 },
+  m33: { home: 5, away: 1 },
+  m34: { home: 2, away: 1 },
+  m35: { home: 0, away: 0 },
+  m36: { home: 0, away: 4 },
+  m37: { home: 4, away: 0 },
+  m38: { home: 0, away: 0 },
+  m39: { home: 2, away: 2 },
+  m40: { home: 1, away: 3 }
 };

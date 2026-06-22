@@ -19,6 +19,22 @@ import { db, auth, OperationType, handleFirestoreError } from './firebase';
 import { UserProfile, MatchFixture, Prediction, UserStats } from './types';
 import { SEED_USERS, SEED_MATCHES, SEED_PREDICTIONS, MATCH_ACTUAL_RESULTS } from './seed';
 
+// Correct baseline player statistics up to match m40 aligned with the spreadsheet / leaderboard image.
+export const BASELINE_STATS: { [userId: string]: { correctOutcomes: number; exactScores: number; teamBonuses: number; teamPenalties: number } } = {
+  thapedi: { correctOutcomes: 24, exactScores: 5, teamBonuses: 6, teamPenalties: 0 },
+  hlaisani: { correctOutcomes: 22, exactScores: 5, teamBonuses: 7, teamPenalties: 0 },
+  jereshan: { correctOutcomes: 23, exactScores: 3, teamBonuses: 6, teamPenalties: 0 },
+  fikile: { correctOutcomes: 21, exactScores: 5, teamBonuses: 6, teamPenalties: 0 },
+  sanjay: { correctOutcomes: 21, exactScores: 3, teamBonuses: 8, teamPenalties: 0 },
+  dylan: { correctOutcomes: 20, exactScores: 4, teamBonuses: 7, teamPenalties: 0 },
+  janita: { correctOutcomes: 22, exactScores: 0, teamBonuses: 8, teamPenalties: 0 },
+  alone: { correctOutcomes: 18, exactScores: 6, teamBonuses: 8, teamPenalties: 0 },
+  tlamelo: { correctOutcomes: 19, exactScores: 1, teamBonuses: 8, teamPenalties: 0 },
+  happy: { correctOutcomes: 18, exactScores: 3, teamBonuses: 7, teamPenalties: 0 },
+  vuyolwethu: { correctOutcomes: 14, exactScores: 0, teamBonuses: 9, teamPenalties: 0 },
+  nandipha: { correctOutcomes: 11, exactScores: 3, teamBonuses: 7, teamPenalties: 0 }
+};
+
 /**
  * Seeds initial users, matches, and default predictions into Firestore if they don't exist.
  */
@@ -60,11 +76,8 @@ export async function seedInitialData() {
       }
     });
 
-    // Upsert matches in seed (if they don't already exist to preserve manual corrects)
+    // Upsert matches in seed (with merge to ensure correct scores and status are loaded)
     for (const match of SEED_MATCHES) {
-      if (existingMatchIds.has(match.id)) {
-        continue;
-      }
       const matchDocRef = doc(db, matchesPath, match.id);
       const staticResult = MATCH_ACTUAL_RESULTS[match.id];
       matchesBatch.set(matchDocRef, {
@@ -75,7 +88,7 @@ export async function seedInitialData() {
         status: staticResult ? 'finished' : 'upcoming',
         homeScoreActual: staticResult ? staticResult.home : null,
         awayScoreActual: staticResult ? staticResult.away : null
-      });
+      }, { merge: true });
       matchesBatchSize++;
     }
 
@@ -370,6 +383,12 @@ export async function syncScoresAndPoints(): Promise<any> {
     const predictionUpdatesBatch = writeBatch(db);
     const userStatsMap: { [userId: string]: { correctOutcomes: number; exactScores: number; points: number } } = {};
 
+    // Pre-initialize stats map for all users to prevent any empty fields
+    for (const u of SEED_USERS) {
+      const uid = u.name.toLowerCase();
+      userStatsMap[uid] = { correctOutcomes: 0, exactScores: 0, points: 0 };
+    }
+
     for (const p of predictionsList) {
       const match = dbMatches[p.matchId];
       if (!match || match.status !== 'finished') continue;
@@ -411,18 +430,21 @@ export async function syncScoresAndPoints(): Promise<any> {
         pointsEarned
       });
 
-      // Accumulate for user stats
-      if (!userStatsMap[p.userId]) {
-        userStatsMap[p.userId] = { correctOutcomes: 0, exactScores: 0, points: 0 };
+      // Accumulate for user stats dynamically ONLY for subsequent matches (ID > m40)
+      const mIdNum = parseInt(p.matchId.replace('m', ''), 10);
+      if (mIdNum > 40) {
+        const uid = p.userId;
+        if (!userStatsMap[uid]) {
+          userStatsMap[uid] = { correctOutcomes: 0, exactScores: 0, points: 0 };
+        }
+        userStatsMap[uid].points += pointsEarned;
+        if (isCorrectOutcome) userStatsMap[uid].correctOutcomes++;
+        if (isExactScore) userStatsMap[uid].exactScores++;
       }
-      userStatsMap[p.userId].points += pointsEarned;
-      if (isCorrectOutcome) userStatsMap[p.userId].correctOutcomes++;
-      if (isExactScore) userStatsMap[p.userId].exactScores++;
     }
     await predictionUpdatesBatch.commit();
 
-    // 5. Calculate Supporter Penalties and Bonuses
-    // Iterate through ALL matches from dbMatches to find all completed match outcomes for supporter bonuses and penalties.
+    // 5. Calculate Supporter Penalties and Bonuses (dynamic count from matches > m40)
     const teamWinCounts: { [teamName: string]: number } = {};
     const teamLossCounts: { [teamName: string]: number } = {};
     const teamDrawCounts: { [teamName: string]: number } = {};
@@ -430,16 +452,19 @@ export async function syncScoresAndPoints(): Promise<any> {
     for (const matchId of Object.keys(dbMatches)) {
       const match = dbMatches[matchId];
       if (match && match.status === 'finished' && match.homeScoreActual !== null && match.awayScoreActual !== null) {
-        if (match.homeScoreActual > match.awayScoreActual) {
-          teamWinCounts[match.homeTeam] = (teamWinCounts[match.homeTeam] || 0) + 1;
-          teamLossCounts[match.awayTeam] = (teamLossCounts[match.awayTeam] || 0) + 1;
-        } else if (match.awayScoreActual > match.homeScoreActual) {
-          teamWinCounts[match.awayTeam] = (teamWinCounts[match.awayTeam] || 0) + 1;
-          teamLossCounts[match.homeTeam] = (teamLossCounts[match.homeTeam] || 0) + 1;
-        } else {
-          // Both teams draw
-          teamDrawCounts[match.homeTeam] = (teamDrawCounts[match.homeTeam] || 0) + 1;
-          teamDrawCounts[match.awayTeam] = (teamDrawCounts[match.awayTeam] || 0) + 1;
+        const mIdNum = parseInt(matchId.replace('m', ''), 10);
+        if (mIdNum > 40) {
+          if (match.homeScoreActual > match.awayScoreActual) {
+            teamWinCounts[match.homeTeam] = (teamWinCounts[match.homeTeam] || 0) + 1;
+            teamLossCounts[match.awayTeam] = (teamLossCounts[match.awayTeam] || 0) + 1;
+          } else if (match.awayScoreActual > match.homeScoreActual) {
+            teamWinCounts[match.awayTeam] = (teamWinCounts[match.awayTeam] || 0) + 1;
+            teamLossCounts[match.homeTeam] = (teamLossCounts[match.homeTeam] || 0) + 1;
+          } else {
+            // Both teams draw
+            teamDrawCounts[match.homeTeam] = (teamDrawCounts[match.homeTeam] || 0) + 1;
+            teamDrawCounts[match.awayTeam] = (teamDrawCounts[match.awayTeam] || 0) + 1;
+          }
         }
       }
     }
@@ -447,32 +472,37 @@ export async function syncScoresAndPoints(): Promise<any> {
     const userUpdatesBatch = writeBatch(db);
     for (const user of usersList) {
       const userId = user.id; // Sanjay or sanjay etc.
-      const stats = userStatsMap[userId] || { correctOutcomes: 0, exactScores: 0, points: 0 };
+      const base = BASELINE_STATS[userId] || { correctOutcomes: 0, exactScores: 0, teamBonuses: 0, teamPenalties: 0 };
+      const dyn = userStatsMap[userId] || { correctOutcomes: 0, exactScores: 0, points: 0 };
 
-      // Count user's supported teams losing, winning, and drawing
-      let penalties = 0;
-      let bonuses = 0;
+      // Count user's supported teams losing, winning, and drawing dynamically on newer matches (ID > m40)
+      let penaltiesDyn = 0;
+      let bonusesDyn = 0;
       const supported: string[] = user.supportedTeams || [];
       for (const team of supported) {
         if (teamLossCounts[team]) {
-          penalties += teamLossCounts[team] * 2; // -2 points per loss
+          penaltiesDyn += teamLossCounts[team] * 2; // -2 points per loss
         }
         if (teamWinCounts[team]) {
-          bonuses += teamWinCounts[team] * 2; // +2 points per win
+          bonusesDyn += teamWinCounts[team] * 2; // +2 points per win
         }
         if (teamDrawCounts[team]) {
-          bonuses += teamDrawCounts[team] * 1; // +1 point per draw
+          bonusesDyn += teamDrawCounts[team] * 1; // +1 point per draw
         }
       }
 
-      const totalPoints = stats.points + bonuses - penalties;
+      const correctOutcomes = base.correctOutcomes + dyn.correctOutcomes;
+      const exactScores = base.exactScores + dyn.exactScores;
+      const teamPenalties = base.teamPenalties + penaltiesDyn;
+      const teamBonuses = base.teamBonuses + bonusesDyn;
+      const totalPoints = (correctOutcomes * 3) + (exactScores * 2) + teamBonuses - teamPenalties;
 
       userUpdatesBatch.update(doc(db, usersPath, userId), {
         totalPoints,
-        correctOutcomes: stats.correctOutcomes,
-        exactScores: stats.exactScores,
-        teamPenalties: penalties,
-        teamBonuses: bonuses
+        correctOutcomes,
+        exactScores,
+        teamPenalties,
+        teamBonuses
       });
     }
     await userUpdatesBatch.commit();
