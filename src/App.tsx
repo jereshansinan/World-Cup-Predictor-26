@@ -51,23 +51,29 @@ export default function App() {
               }
               setCurrentUserProfile(data);
             } else {
-              // Fallback - check if profile is already mapped by name portion key
+              // Fallback - check if profile is already mapped by name portion key (e.g. for non-anonymous user)
               const emailPrefix = user.email?.split('@')[0] || '';
-              const queryNameRef = query(collection(db, 'users'), where('id', '==', emailPrefix));
-              getDocs(queryNameRef).then((nameSnap) => {
-                if (!nameSnap.empty) {
-                  const data = nameSnap.docs[0].data();
-                  if (data && !data.id) {
-                    data.id = nameSnap.docs[0].id;
+              if (emailPrefix) {
+                const queryNameRef = query(collection(db, 'users'), where('id', '==', emailPrefix));
+                getDocs(queryNameRef).then((nameSnap) => {
+                  if (!nameSnap.empty) {
+                    const data = nameSnap.docs[0].data();
+                    if (data && !data.id) {
+                      data.id = nameSnap.docs[0].id;
+                    }
+                    setCurrentUserProfile(data);
+                  } else {
+                    setCurrentUserProfile(null);
                   }
-                  setCurrentUserProfile(data);
-                } else {
+                }).catch((e) => {
+                  console.error('Fallback profile lookup error:', e);
                   setCurrentUserProfile(null);
-                }
-              }).catch((e) => {
-                console.error('Fallback profile lookup error:', e);
-                setCurrentUserProfile(null);
-              });
+                });
+              } else {
+                // For anonymous auth / active profile transition, preserve the already-selected profile state 
+                // instead of resetting it back to null, which resolves the 2-second reload/flicker issue.
+                setCurrentUserProfile((prev) => prev ? prev : null);
+              }
             }
           }, (error) => {
             console.error('UserProfile snapshot listener failed:', error);
@@ -140,10 +146,10 @@ export default function App() {
             </div>
             <div>
               <h1 className="font-display font-medium text-3xl sm:text-4xl text-white uppercase tracking-tight leading-none">
-                Predictor League '26
+                CPF World cup Predicter
               </h1>
               <span className="text-[10px] text-[#ffb703] font-display tracking-widest font-bold uppercase block mt-0.5">
-                🏆 FIFA World Cup Final Reckoning
+                🏆 FIFA World Cup 2026
               </span>
             </div>
           </div>
@@ -237,7 +243,7 @@ export default function App() {
 
       {/* Footer bar */}
       <footer className="py-6 border-t border-zinc-900 text-center text-[10px] text-zinc-500 uppercase tracking-widest font-mono">
-        ⚽ World Cup Predictor League 2026 • Real Time Data Server • Safe Sandbox
+        ⚽ CPF World cup Predicter 2026 • Real Time Data Server • Safe Sandbox
       </footer>
     </div>
   );

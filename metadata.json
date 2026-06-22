@@ -1,5 +1,5 @@
 {
-  "name": "World Cup Predictor League",
+  "name": "CPF World cup Predicter",
   "description": "A predictor league application for the World Cup where players enter match scores, earn prediction outcome points, and manage supported team loss penalties.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

@@ -54,7 +54,7 @@ export function Leaderboard() {
             League Standing Table
           </h2>
           <p className="text-xs text-white/75 font-sans leading-relaxed">
-            Real-time predictor reckonings. Correct Winner = <strong className="text-white">3 PTS</strong> | Exact Score = <strong className="text-white">+2 PTS</strong> | Supported Wins = <strong className="text-emerald-400">+2 PTS</strong> | Supported Draws = <strong className="text-emerald-300">+1 PTS</strong> | Supported Fails = <strong className="text-red-400">-2 PTS</strong>.
+            Real-time predictor standings. Correct Winner = <strong className="text-white">3 PTS</strong> | Exact Score = <strong className="text-white">+2 PTS</strong> | Supported Wins = <strong className="text-emerald-400">+2 PTS</strong> | Supported Draws = <strong className="text-emerald-300">+1 PTS</strong> | Supported Fails = <strong className="text-red-400">-2 PTS</strong>.
           </p>
         </div>
       </div>

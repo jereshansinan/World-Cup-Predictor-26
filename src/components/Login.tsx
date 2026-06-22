@@ -60,12 +60,9 @@ export function Login({ onLoginSuccess }: LoginProps) {
           <div className="inline-flex items-center justify-center bg-gradient-to-br from-emerald-950 to-zinc-950 p-3 sm:p-4 border border-zinc-800 rounded-full mb-3 shadow-[0_0_20px_rgba(255,183,3,0.15)]">
             <Trophy className="w-8 h-8 sm:w-10 sm:h-10 text-[#ffb703]" />
           </div>
-          <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-white mb-1 uppercase leading-none">
-            Predictor League '26
+          <h1 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-white mb-2 uppercase leading-none">
+            CPF World cup Predicter
           </h1>
-          <p className="text-[#ffb703] text-xs font-semibold uppercase tracking-widest font-display">
-            🏆 CHAMPIONSHIP RECKONING 🏆
-          </p>
         </div>
 
         {/* Login Form */}
@@ -89,7 +86,7 @@ export function Login({ onLoginSuccess }: LoginProps) {
                 id="select_player_dropdown"
               >
                 <option value="">-- Choose your name --</option>
-                {SEED_USERS.map((user) => (
+                {[...SEED_USERS].sort((a, b) => a.name.localeCompare(b.name)).map((user) => (
                   <option key={user.name} value={user.name}>
                     {user.name}
                   </option>

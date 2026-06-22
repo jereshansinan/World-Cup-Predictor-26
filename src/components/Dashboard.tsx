@@ -272,7 +272,7 @@ export function Dashboard({ userProfile }: DashboardProps) {
             </p>
           </div>
           <div className="text-right text-[11px] text-[#ffb703] font-display uppercase tracking-wider flex items-center gap-1.5 bg-black/40 px-3.5 py-1.5 border border-[#ffb703]/20 rounded-full">
-            <Clock className="w-3.5 h-3.5 text-[#ffb703] animate-pulse" /> Final Reckoning System
+            <Clock className="w-3.5 h-3.5 text-[#ffb703] animate-pulse" /> Final Predictor System
           </div>
         </div>
 
