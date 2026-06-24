@@ -17,7 +17,7 @@ export default function App() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
-    return (localStorage.getItem('theme') as 'dark' | 'light') || 'dark';
+    return (localStorage.getItem('theme') as 'dark' | 'light') || 'light';
   });
 
   // Handle document class toggles on theme state changes
@@ -225,11 +225,11 @@ export default function App() {
             <button
               onClick={handleLogout}
               disabled={isLoggingOut}
-              className="px-3 py-2 bg-red-950/60 hover:bg-red-900 border border-red-500/30 text-white rounded-xl transition cursor-pointer flex items-center gap-1.5 text-xs font-semibold uppercase font-display"
+              className="px-3 py-2 bg-red-600 hover:bg-red-700 border border-red-700 text-white rounded-xl transition cursor-pointer flex items-center gap-1.5 text-xs font-semibold uppercase font-display"
               title="Logout Profile"
               id="logout_header_btn"
             >
-              <LogOut className="w-3.5 h-3.5 text-red-400" />
+              <LogOut className="w-3.5 h-3.5 text-white" />
               <span>Exit</span>
             </button>
           </div>

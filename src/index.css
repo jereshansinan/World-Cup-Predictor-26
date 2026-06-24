@@ -262,12 +262,17 @@ html.light #admin_sync_panel p.text-white\/70 {
   color: #235030 !important;
 }
 
-html.light .text-white {
+html.light .text-white,
+html.light .text-white\/95,
+html.light .text-white\/90,
+html.light .text-white\/85,
+html.light .text-white\/80 {
   color: #102d18 !important;
 }
 
 html.light .text-white\/75,
 html.light .text-white\/70,
+html.light .text-white\/60,
 html.light .text-zinc-400 {
   color: #235030 !important;
 }
@@ -275,8 +280,25 @@ html.light .text-zinc-400 {
 html.light .text-white\/50,
 html.light .text-white\/45,
 html.light .text-white\/40,
+html.light .text-white\/30,
 html.light .text-zinc-500 {
   color: #51755a !important;
+}
+
+/* Ensure the exit button is always prominently red with pure white text and icon in both themes */
+#logout_header_btn {
+  background-color: #dc2626 !important; /* bg-red-600 */
+  color: #ffffff !important;
+  border-color: #b91c1c !important; /* border-red-700 */
+}
+
+#logout_header_btn:hover {
+  background-color: #b91c1c !important; /* hover:bg-red-700 */
+}
+
+#logout_header_btn svg,
+#logout_header_btn span {
+  color: #ffffff !important;
 }
 
 /* Form Inputs & Selects dropdown elements */
@@ -426,7 +448,8 @@ html.light #leaderboard_scroll_viewport table tbody tr td span.bg-black\/30 {
   color: #102d18 !important;
 }
 
-html.light #leaderboard_scroll_viewport table tbody tr td span.text-\[\#ffb703\]\/90 {
+html.light #leaderboard_scroll_viewport table tbody tr td span.text-\[\#ffb703\]\/90,
+html.light .text-\[\#ffb703\] {
   color: #ab7a00 !important;
 }
 
