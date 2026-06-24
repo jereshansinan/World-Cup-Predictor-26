@@ -194,15 +194,40 @@ export async function seedInitialData() {
       }
     });
 
-    // Upsert users in seed
+    // Upsert users in seed with default baseline points and trends
+    const BASELINE_TRENDS: { [userId: string]: number } = {
+      thapedi: 1,
+      hlaisani: 0,
+      jereshan: 2,
+      fikile: -2,
+      sanjay: -1,
+      dylan: 1,
+      janita: -1,
+      alone: 0,
+      tlamelo: 2,
+      happy: -2,
+      vuyolwethu: 0,
+      nandipha: 0
+    };
+
     for (const user of SEED_USERS) {
       const userId = user.name.toLowerCase();
       const userRef = doc(db, usersPath, userId);
+      const base = BASELINE_STATS[userId] || { correctOutcomes: 0, exactScores: 0, teamBonuses: 0, teamPenalties: 0 };
+      const totalPoints = (base.correctOutcomes * 3) + (base.exactScores * 2) + base.teamBonuses - base.teamPenalties;
+      const rankTrend = BASELINE_TRENDS[userId] ?? 0;
+
       // Merge with existing users to preserve authUid fields if they signed up
       usersBatch.set(userRef, {
         id: userId,
         name: user.name,
-        supportedTeams: user.supportedTeams
+        supportedTeams: user.supportedTeams,
+        totalPoints,
+        correctOutcomes: base.correctOutcomes,
+        exactScores: base.exactScores,
+        teamPenalties: base.teamPenalties,
+        teamBonuses: base.teamBonuses,
+        rankTrend
       }, { merge: true });
       usersBatchSize++;
     }
@@ -468,16 +493,8 @@ export async function syncScoresAndPoints(): Promise<any> {
       usersList.push(doc.data());
     });
 
-    // Compute predictions points
+    // Compute predictions points and save dynamic pointsEarned in predictions collection
     const predictionUpdatesBatch = writeBatch(db);
-    const userStatsMap: { [userId: string]: { correctOutcomes: number; exactScores: number; points: number } } = {};
-
-    // Pre-initialize stats map for all users to prevent any empty fields
-    for (const u of SEED_USERS) {
-      const uid = u.name.toLowerCase();
-      userStatsMap[uid] = { correctOutcomes: 0, exactScores: 0, points: 0 };
-    }
-
     for (const p of predictionsList) {
       const match = dbMatches[p.matchId];
       if (!match || match.status !== 'finished') continue;
@@ -488,10 +505,81 @@ export async function syncScoresAndPoints(): Promise<any> {
       if (actHome === null || actAway === null) continue;
 
       let pointsEarned = 0;
+
+      if (p.homeScorePredicted !== null && p.awayScorePredicted !== null) {
+        const predHome = p.homeScorePredicted;
+        const predAway = p.awayScorePredicted;
+
+        const actualDiff = actHome - actAway;
+        const predDiff = predHome - predAway;
+
+        const actualOutcome = actualDiff > 0 ? 'home' : actualDiff < 0 ? 'away' : 'draw';
+        const predOutcome = predDiff > 0 ? 'home' : predDiff < 0 ? 'away' : 'draw';
+
+        if (actualOutcome === predOutcome) {
+          pointsEarned = 3;
+          if (actHome === predHome && actAway === predAway) {
+            pointsEarned = 5; // 3 + 2 bonus
+          }
+        }
+      }
+
+      predictionUpdatesBatch.update(doc(db, predictionsPath, p.id), {
+        pointsEarned
+      });
+    }
+    await predictionUpdatesBatch.commit();
+
+    // Identify the latest finished match ID (numeric ID > 40)
+    const finishedMatchIdNums = Object.keys(dbMatches)
+      .filter(id => dbMatches[id].status === 'finished')
+      .map(id => parseInt(id.replace('m', ''), 10));
+    const maxFinishedIdNum = finishedMatchIdNums.length > 0 ? Math.max(...finishedMatchIdNums) : 0;
+    const latestFinishedId = maxFinishedIdNum > 40 ? `m${maxFinishedIdNum}` : null;
+
+    // We will build complete stats for each user
+    const computedUsersStats: {
+      [userId: string]: {
+        id: string;
+        currentPoints: number;
+        currentCorrect: number;
+        prevPoints: number;
+        prevCorrect: number;
+        correctOutcomes: number;
+        exactScores: number;
+        teamPenalties: number;
+        teamBonuses: number;
+      };
+    } = {};
+
+    // Initialize map
+    for (const user of usersList) {
+      computedUsersStats[user.id] = {
+        id: user.id,
+        currentPoints: 0,
+        currentCorrect: 0,
+        prevPoints: 0,
+        prevCorrect: 0,
+        correctOutcomes: 0,
+        exactScores: 0,
+        teamPenalties: 0,
+        teamBonuses: 0
+      };
+    }
+
+    // Recalculate dynamic prediction stats (match ID > 40)
+    for (const p of predictionsList) {
+      const match = dbMatches[p.matchId];
+      if (!match || match.status !== 'finished') continue;
+
+      const actHome = match.homeScoreActual;
+      const actAway = match.awayScoreActual;
+      if (actHome === null || actAway === null) continue;
+
+      let pointsEarned = 0;
       let isCorrectOutcome = false;
       let isExactScore = false;
 
-      // Calculate outcome
       if (p.homeScorePredicted !== null && p.awayScorePredicted !== null) {
         const predHome = p.homeScorePredicted;
         const predAway = p.awayScorePredicted;
@@ -507,42 +595,43 @@ export async function syncScoresAndPoints(): Promise<any> {
           pointsEarned = 3;
           if (actHome === predHome && actAway === predAway) {
             isExactScore = true;
-            pointsEarned = 5; // 3 + 2 bonus
+            pointsEarned = 5;
           }
         }
-      } else {
-        // null prediction results in a loss (0 points)
-        pointsEarned = 0;
       }
 
-      predictionUpdatesBatch.update(doc(db, predictionsPath, p.id), {
-        pointsEarned
-      });
-
-      // Accumulate for user stats dynamically ONLY for subsequent matches (ID > m40)
       const mIdNum = parseInt(p.matchId.replace('m', ''), 10);
       if (mIdNum > 40) {
         const uid = p.userId;
-        if (!userStatsMap[uid]) {
-          userStatsMap[uid] = { correctOutcomes: 0, exactScores: 0, points: 0 };
+        if (computedUsersStats[uid]) {
+          // Accumulate for current
+          computedUsersStats[uid].currentPoints += pointsEarned;
+          if (isCorrectOutcome) computedUsersStats[uid].currentCorrect++;
+
+          // Accumulate for previous (exclude the latest finished match)
+          if (p.matchId !== latestFinishedId) {
+            computedUsersStats[uid].prevPoints += pointsEarned;
+            if (isCorrectOutcome) computedUsersStats[uid].prevCorrect++;
+          }
         }
-        userStatsMap[uid].points += pointsEarned;
-        if (isCorrectOutcome) userStatsMap[uid].correctOutcomes++;
-        if (isExactScore) userStatsMap[uid].exactScores++;
       }
     }
-    await predictionUpdatesBatch.commit();
 
-    // 5. Calculate Supporter Penalties and Bonuses (dynamic count from matches > m40)
+    // Recalculate Supporter Penalties and Bonuses (dynamic count from matches > m40)
     const teamWinCounts: { [teamName: string]: number } = {};
     const teamLossCounts: { [teamName: string]: number } = {};
     const teamDrawCounts: { [teamName: string]: number } = {};
+
+    const prevTeamWinCounts: { [teamName: string]: number } = {};
+    const prevTeamLossCounts: { [teamName: string]: number } = {};
+    const prevTeamDrawCounts: { [teamName: string]: number } = {};
 
     for (const matchId of Object.keys(dbMatches)) {
       const match = dbMatches[matchId];
       if (match && match.status === 'finished' && match.homeScoreActual !== null && match.awayScoreActual !== null) {
         const mIdNum = parseInt(matchId.replace('m', ''), 10);
         if (mIdNum > 40) {
+          // Current counts
           if (match.homeScoreActual > match.awayScoreActual) {
             teamWinCounts[match.homeTeam] = (teamWinCounts[match.homeTeam] || 0) + 1;
             teamLossCounts[match.awayTeam] = (teamLossCounts[match.awayTeam] || 0) + 1;
@@ -550,48 +639,206 @@ export async function syncScoresAndPoints(): Promise<any> {
             teamWinCounts[match.awayTeam] = (teamWinCounts[match.awayTeam] || 0) + 1;
             teamLossCounts[match.homeTeam] = (teamLossCounts[match.homeTeam] || 0) + 1;
           } else {
-            // Both teams draw
             teamDrawCounts[match.homeTeam] = (teamDrawCounts[match.homeTeam] || 0) + 1;
             teamDrawCounts[match.awayTeam] = (teamDrawCounts[match.awayTeam] || 0) + 1;
+          }
+
+          // Previous counts
+          if (matchId !== latestFinishedId) {
+            if (match.homeScoreActual > match.awayScoreActual) {
+              prevTeamWinCounts[match.homeTeam] = (prevTeamWinCounts[match.homeTeam] || 0) + 1;
+              prevTeamLossCounts[match.awayTeam] = (prevTeamLossCounts[match.awayTeam] || 0) + 1;
+            } else if (match.awayScoreActual > match.homeScoreActual) {
+              prevTeamWinCounts[match.awayTeam] = (prevTeamWinCounts[match.awayTeam] || 0) + 1;
+              prevTeamLossCounts[match.homeTeam] = (prevTeamLossCounts[match.homeTeam] || 0) + 1;
+            } else {
+              prevTeamDrawCounts[match.homeTeam] = (prevTeamDrawCounts[match.homeTeam] || 0) + 1;
+              prevTeamDrawCounts[match.awayTeam] = (prevTeamDrawCounts[match.awayTeam] || 0) + 1;
+            }
           }
         }
       }
     }
 
-    const userUpdatesBatch = writeBatch(db);
-    for (const user of usersList) {
-      const userId = user.id; // Sanjay or sanjay etc.
-      const base = BASELINE_STATS[userId] || { correctOutcomes: 0, exactScores: 0, teamBonuses: 0, teamPenalties: 0 };
-      const dyn = userStatsMap[userId] || { correctOutcomes: 0, exactScores: 0, points: 0 };
+    // Now calculate total points, correctOutcomes, exactScores, etc. for both current and previous
+    const userToRankList: any[] = [];
 
-      // Count user's supported teams losing, winning, and drawing dynamically on newer matches (ID > m40)
+    for (const user of usersList) {
+      const userId = user.id;
+      const base = BASELINE_STATS[userId] || { correctOutcomes: 0, exactScores: 0, teamBonuses: 0, teamPenalties: 0 };
+      const stats = computedUsersStats[userId];
+
+      if (!stats) continue;
+
+      // Current calculations
       let penaltiesDyn = 0;
       let bonusesDyn = 0;
       const supported: string[] = user.supportedTeams || [];
       for (const team of supported) {
-        if (teamLossCounts[team]) {
-          penaltiesDyn += teamLossCounts[team] * 2; // -2 points per loss
-        }
-        if (teamWinCounts[team]) {
-          bonusesDyn += teamWinCounts[team] * 2; // +2 points per win
-        }
-        if (teamDrawCounts[team]) {
-          bonusesDyn += teamDrawCounts[team] * 1; // +1 point per draw
+        if (teamLossCounts[team]) penaltiesDyn += teamLossCounts[team] * 2;
+        if (teamWinCounts[team]) bonusesDyn += teamWinCounts[team] * 2;
+        if (teamDrawCounts[team]) bonusesDyn += teamDrawCounts[team] * 1;
+      }
+
+      let dynCorrectOutcomes = 0;
+      let dynExactScores = 0;
+      for (const p of predictionsList) {
+        if (p.userId !== userId) continue;
+        const match = dbMatches[p.matchId];
+        if (!match || match.status !== 'finished') continue;
+
+        const actHome = match.homeScoreActual;
+        const actAway = match.awayScoreActual;
+        if (actHome === null || actAway === null) continue;
+
+        const mIdNum = parseInt(p.matchId.replace('m', ''), 10);
+        if (mIdNum > 40) {
+          if (p.homeScorePredicted !== null && p.awayScorePredicted !== null) {
+            const predHome = p.homeScorePredicted;
+            const predAway = p.awayScorePredicted;
+            const actualDiff = actHome - actAway;
+            const predDiff = predHome - predAway;
+            const actualOutcome = actualDiff > 0 ? 'home' : actualDiff < 0 ? 'away' : 'draw';
+            const predOutcome = predDiff > 0 ? 'home' : predDiff < 0 ? 'away' : 'draw';
+
+            if (actualOutcome === predOutcome) {
+              dynCorrectOutcomes++;
+              if (actHome === predHome && actAway === predAway) {
+                dynExactScores++;
+              }
+            }
+          }
         }
       }
 
-      const correctOutcomes = base.correctOutcomes + dyn.correctOutcomes;
-      const exactScores = base.exactScores + dyn.exactScores;
+      const correctOutcomes = base.correctOutcomes + dynCorrectOutcomes;
+      const exactScores = base.exactScores + dynExactScores;
       const teamPenalties = base.teamPenalties + penaltiesDyn;
       const teamBonuses = base.teamBonuses + bonusesDyn;
       const totalPoints = (correctOutcomes * 3) + (exactScores * 2) + teamBonuses - teamPenalties;
 
+      stats.correctOutcomes = correctOutcomes;
+      stats.exactScores = exactScores;
+      stats.teamPenalties = teamPenalties;
+      stats.teamBonuses = teamBonuses;
+      stats.currentPoints = totalPoints;
+      stats.currentCorrect = correctOutcomes;
+
+      // Previous calculations (exclude latestFinishedId)
+      let prevPenaltiesDyn = 0;
+      let prevBonusesDyn = 0;
+      for (const team of supported) {
+        if (prevTeamLossCounts[team]) prevPenaltiesDyn += prevTeamLossCounts[team] * 2;
+        if (prevTeamWinCounts[team]) prevBonusesDyn += prevTeamWinCounts[team] * 2;
+        if (prevTeamDrawCounts[team]) prevBonusesDyn += prevTeamDrawCounts[team] * 1;
+      }
+
+      let prevDynCorrectOutcomes = 0;
+      let prevDynExactScores = 0;
+      for (const p of predictionsList) {
+        if (p.userId !== userId) continue;
+        if (p.matchId === latestFinishedId) continue; // Skip!
+
+        const match = dbMatches[p.matchId];
+        if (!match || match.status !== 'finished') continue;
+
+        const actHome = match.homeScoreActual;
+        const actAway = match.awayScoreActual;
+        if (actHome === null || actAway === null) continue;
+
+        const mIdNum = parseInt(p.matchId.replace('m', ''), 10);
+        if (mIdNum > 40) {
+          if (p.homeScorePredicted !== null && p.awayScorePredicted !== null) {
+            const predHome = p.homeScorePredicted;
+            const predAway = p.awayScorePredicted;
+            const actualDiff = actHome - actAway;
+            const predDiff = predHome - predAway;
+            const actualOutcome = actualDiff > 0 ? 'home' : actualDiff < 0 ? 'away' : 'draw';
+            const predOutcome = predDiff > 0 ? 'home' : predDiff < 0 ? 'away' : 'draw';
+
+            if (actualOutcome === predOutcome) {
+              prevDynCorrectOutcomes++;
+              if (actHome === predHome && actAway === predAway) {
+                prevDynExactScores++;
+              }
+            }
+          }
+        }
+      }
+
+      const prevCorrectOutcomes = base.correctOutcomes + prevDynCorrectOutcomes;
+      const prevExactScores = base.exactScores + prevDynExactScores;
+      const prevTeamPenalties = base.teamPenalties + prevPenaltiesDyn;
+      const prevTeamBonuses = base.teamBonuses + prevBonusesDyn;
+      const prevTotalPoints = (prevCorrectOutcomes * 3) + (prevExactScores * 2) + prevTeamBonuses - prevTeamPenalties;
+
+      stats.prevPoints = prevTotalPoints;
+      stats.prevCorrect = prevCorrectOutcomes;
+
+      userToRankList.push({
+        id: userId,
+        currentPoints: totalPoints,
+        currentCorrect: correctOutcomes,
+        prevPoints: prevTotalPoints,
+        prevCorrect: prevCorrectOutcomes
+      });
+    }
+
+    // Rank the users
+    const rankUsers = (usersToRank: any[], pointField: string, correctField: string) => {
+      const sorted = [...usersToRank].sort((a, b) => {
+        if (b[pointField] !== a[pointField]) {
+          return b[pointField] - a[pointField];
+        }
+        return b[correctField] - a[correctField];
+      });
+      const ranks: { [userId: string]: number } = {};
+      sorted.forEach((u, i) => {
+        ranks[u.id] = i + 1;
+      });
+      return ranks;
+    };
+
+    const currentRanks = rankUsers(userToRankList, 'currentPoints', 'currentCorrect');
+    const previousRanks = rankUsers(userToRankList, 'prevPoints', 'prevCorrect');
+
+    const BASELINE_TRENDS: { [userId: string]: number } = {
+      thapedi: 1,
+      hlaisani: 0,
+      jereshan: 2,
+      fikile: -2,
+      sanjay: -1,
+      dylan: 1,
+      janita: -1,
+      alone: 0,
+      tlamelo: 2,
+      happy: -2,
+      vuyolwethu: 0,
+      nandipha: 0
+    };
+
+    const userUpdatesBatch = writeBatch(db);
+    for (const user of usersList) {
+      const userId = user.id;
+      const stats = computedUsersStats[userId];
+      if (!stats) continue;
+
+      let rankTrend = 0;
+      if (latestFinishedId) {
+        const curRank = currentRanks[userId] || 12;
+        const prevRank = previousRanks[userId] || 12;
+        rankTrend = prevRank - curRank;
+      } else {
+        rankTrend = BASELINE_TRENDS[userId] ?? 0;
+      }
+
       userUpdatesBatch.update(doc(db, usersPath, userId), {
-        totalPoints,
-        correctOutcomes,
-        exactScores,
-        teamPenalties,
-        teamBonuses
+        totalPoints: stats.currentPoints,
+        correctOutcomes: stats.correctOutcomes,
+        exactScores: stats.exactScores,
+        teamPenalties: stats.teamPenalties,
+        teamBonuses: stats.teamBonuses,
+        rankTrend: rankTrend
       });
     }
     await userUpdatesBatch.commit();

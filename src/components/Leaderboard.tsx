@@ -24,7 +24,8 @@ export function Leaderboard() {
           correctOutcomes: data.correctOutcomes ?? 0,
           exactScores: data.exactScores ?? 0,
           teamPenalties: data.teamPenalties ?? 0,
-          teamBonuses: data.teamBonuses ?? 0
+          teamBonuses: data.teamBonuses ?? 0,
+          rankTrend: data.rankTrend ?? 0
         });
       });
 
@@ -60,9 +61,71 @@ export function Leaderboard() {
       </div>
 
       {loading ? (
-        <div className="py-12 text-center text-white/50 flex flex-col items-center gap-3">
-          <div className="w-8 h-8 rounded-full border-2 border-[#ffb703] border-t-transparent animate-spin"></div>
-          <span>Drafting final stand tables...</span>
+        <div className="space-y-6" id="leaderboard_skeleton_loader">
+          <div className="bg-zinc-950/80 rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-black/80 text-white/40 text-[10px] sm:text-xs uppercase tracking-wider font-display font-medium border-b border-white/15">
+                    <th className="py-3 px-4 text-center w-12">Pos</th>
+                    <th className="py-3 px-4">Manager</th>
+                    <th className="py-3 px-4 text-center">Supported Squads</th>
+                    <th className="py-3 px-4 text-center">Correct Wins</th>
+                    <th className="py-3 px-4 text-center">Exacts</th>
+                    <th className="py-3 px-4 text-center">Flag Bonuses</th>
+                    <th className="py-3 px-4 text-center">Flag Penalties</th>
+                    <th className="py-3 px-4 text-right pr-6">Total Score</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {Array.from({ length: 12 }).map((_, idx) => (
+                    <tr key={idx} className="animate-pulse">
+                      <td className="py-4 px-4">
+                        <div className="flex justify-center">
+                          <div className="h-4 w-4 bg-white/10 rounded"></div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="h-4 w-24 bg-white/10 rounded"></div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="flex justify-center gap-1">
+                          <div className="h-4 w-5 bg-white/10 rounded"></div>
+                          <div className="h-4 w-5 bg-white/10 rounded"></div>
+                          <div className="h-4 w-5 bg-white/10 rounded"></div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="flex justify-center">
+                          <div className="h-4 w-6 bg-white/10 rounded"></div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="flex justify-center">
+                          <div className="h-4 w-6 bg-white/10 rounded"></div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="flex justify-center">
+                          <div className="h-4 w-6 bg-white/10 rounded"></div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4">
+                        <div className="flex justify-center">
+                          <div className="h-4 w-6 bg-white/10 rounded"></div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4 pr-6">
+                        <div className="flex justify-end">
+                          <div className="h-4 w-10 bg-white/10 rounded"></div>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       ) : rankings.length === 0 ? (
         <div className="p-8 text-center bg-black/45 rounded-xl border border-white/10 text-white/40 font-display">
@@ -102,23 +165,42 @@ export function Leaderboard() {
                        id={`manager_row_${user.userId}`}
                      >
                        {/* Rank Position Column */}
-                       <td className="py-3.5 px-4 text-center font-mono font-bold">
-                         <div className="flex justify-center items-center">
-                           {isFirst ? (
-                             <motion.span 
-                               animate={{ scale: [1, 1.15, 1] }}
-                               transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
-                               className="text-lg"
-                               title="League Crown Champion"
-                               id="crown_leader_mark"
-                             >
-                               👑
-                             </motion.span>
-                           ) : (
-                             <span className="text-white/60 font-mono text-xs">
-                               {pos}
-                             </span>
-                           )}
+                       <td className="py-3 px-4 text-center font-mono">
+                         <div className="flex flex-col items-center justify-center">
+                           <div className="flex items-center gap-1">
+                             {isFirst ? (
+                               <motion.span 
+                                 animate={{ scale: [1, 1.15, 1] }}
+                                 transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+                                 className="text-sm shrink-0"
+                                 title="League Crown Champion"
+                                 id="crown_leader_mark"
+                               >
+                                 👑
+                               </motion.span>
+                             ) : (
+                               <span className="text-white/60 font-mono text-xs font-bold">
+                                 {pos}
+                               </span>
+                             )}
+                           </div>
+                           
+                           {/* Trend Indicator */}
+                           <div className="mt-0.5 text-[9px] flex items-center justify-center font-bold">
+                             {user.rankTrend && user.rankTrend > 0 ? (
+                               <span className="text-emerald-500 dark:text-emerald-400 flex items-center gap-0.5" title={`Moved up ${user.rankTrend} positions`}>
+                                 ▲{user.rankTrend}
+                               </span>
+                             ) : user.rankTrend && user.rankTrend < 0 ? (
+                               <span className="text-red-600 dark:text-red-500 flex items-center gap-0.5" title={`Moved down ${Math.abs(user.rankTrend)} positions`}>
+                                 ▼{Math.abs(user.rankTrend)}
+                               </span>
+                             ) : (
+                               <span className="text-white/30" title="Unchanged">
+                                 —
+                                </span>
+                             )}
+                           </div>
                          </div>
                        </td>
  

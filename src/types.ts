@@ -3,6 +3,7 @@ export interface UserProfile {
   name: string;
   supportedTeams: string[]; // exactly 3 teams
   totalPoints: number;
+  rankTrend?: number; // trend in standing (+ up, - down, 0 neutral)
 }
 
 export interface MatchFixture {
@@ -34,4 +35,5 @@ export interface UserStats {
   exactScores: number;
   teamPenalties: number;
   teamBonuses: number;
+  rankTrend?: number;
 }
