@@ -233,7 +233,7 @@ export function Dashboard({ userProfile }: DashboardProps) {
       )}
 
       {/* 3 Supported Teams Panel */}
-      <div className="bg-zinc-950/60 p-5 rounded-2xl border border-white/10 shadow-lg relative overflow-hidden">
+      <div className="bg-zinc-950/60 p-5 rounded-2xl border border-white/10 shadow-lg relative overflow-hidden" id="active_supporting_squads_panel">
         <div className="absolute top-0 right-0 w-32 h-32 bg-[#ffb703]/5 blur-3xl rounded-full"></div>
         <h3 className="font-display font-medium text-sm uppercase tracking-widest text-[#ffb703] mb-3 flex items-center gap-2">
           <Shield className="w-4 h-4 text-[#ffb703]" /> Active Supporting squads
@@ -270,9 +270,6 @@ export function Dashboard({ userProfile }: DashboardProps) {
             <p className="text-xs text-white/75 font-sans">
               Enter scores to predict results. Predictions close on match dates.
             </p>
-          </div>
-          <div className="text-right text-[11px] text-[#ffb703] font-display uppercase tracking-wider flex items-center gap-1.5 bg-black/40 px-3.5 py-1.5 border border-[#ffb703]/20 rounded-full">
-            <Clock className="w-3.5 h-3.5 text-[#ffb703] animate-pulse" /> Final Predictor System
           </div>
         </div>
 

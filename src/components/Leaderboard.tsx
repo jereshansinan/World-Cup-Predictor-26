@@ -186,19 +186,19 @@ export function Leaderboard() {
                            </div>
                            
                            {/* Trend Indicator */}
-                           <div className="mt-0.5 text-[9px] flex items-center justify-center font-bold">
+                           <div className="mt-1 text-xs sm:text-sm flex items-center justify-center font-bold">
                              {user.rankTrend && user.rankTrend > 0 ? (
-                               <span className="text-emerald-500 dark:text-emerald-400 flex items-center gap-0.5" title={`Moved up ${user.rankTrend} positions`}>
-                                 ▲{user.rankTrend}
+                               <span className="text-emerald-500 dark:text-[#10b981] flex items-center gap-0.5" title={`Moved up ${user.rankTrend} positions`}>
+                                 ▲ {user.rankTrend}
                                </span>
                              ) : user.rankTrend && user.rankTrend < 0 ? (
-                               <span className="text-red-600 dark:text-red-500 flex items-center gap-0.5" title={`Moved down ${Math.abs(user.rankTrend)} positions`}>
-                                 ▼{Math.abs(user.rankTrend)}
+                               <span className="text-rose-600 dark:text-[#f43f5e] flex items-center gap-0.5" title={`Moved down ${Math.abs(user.rankTrend)} positions`}>
+                                 ▼ {Math.abs(user.rankTrend)}
                                </span>
                              ) : (
-                               <span className="text-white/30" title="Unchanged">
+                               <span className="text-white/40 dark:text-white/30" title="Unchanged">
                                  —
-                                </span>
+                               </span>
                              )}
                            </div>
                          </div>

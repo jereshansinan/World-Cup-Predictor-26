@@ -245,7 +245,7 @@ html.light #tab_navigator_bar button.bg-\[\#ffb703\] {
 /* Cards & Containers general */
 html.light #login_card,
 html.light #admin_sync_panel,
-html.light #predictions_dashboard_container > div,
+html.light #active_supporting_squads_panel,
 html.light .fixtures-container-theme {
   background-color: #ffffff !important;
   border-color: rgba(26, 71, 42, 0.12) !important;
