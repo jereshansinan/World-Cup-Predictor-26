@@ -13,6 +13,11 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
+/* Dynamic ease transitions for theme switching */
+html, body, div, header, main, footer, tr, td, button, select, input {
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.15s ease, box-shadow 0.25s ease;
+}
+
 /* Base custom styles to represent the high-density football pitch background and fields */
 body {
   background-color: #1a472a;
@@ -94,6 +99,53 @@ body {
   color: #e63946;
 }
 
+/* Custom Status Pills rules */
+.status-pill {
+  font-family: var(--font-display);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 2px 7.5px;
+  border-radius: 6px;
+}
+
+.status-locked {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.status-open {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+/* User profile details in header card styling */
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 6px 14px;
+  border-radius: 12px;
+}
+
+.supporting-badge {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #ffb703;
+  margin-bottom: 2px;
+}
+
+.teams-list {
+  display: flex;
+  gap: 6px;
+}
+
 /* Elegant custom scrollbar definition */
 ::-webkit-scrollbar {
   width: 6px;
@@ -108,4 +160,313 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.4);
+}
+
+/* ==========================================================================
+   LIGHT MODE OVERRIDES
+   ========================================================================== */
+
+html.light body {
+  background-color: #f1f5f2;
+  color: #102d18;
+}
+
+html.light .stadium-pitch {
+  background: radial-gradient(circle at 50% 50%, #f6f9f7 0%, #e0ebe3 100%) !important;
+}
+
+html.light .pitch-overlay {
+  background-image: 
+    linear-gradient(rgba(26, 71, 42, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(26, 71, 42, 0.035) 1px, transparent 1px) !important;
+}
+
+html.light .field-lines,
+html.light .field-circle {
+  border-color: rgba(26, 71, 42, 0.065) !important;
+}
+
+/* Header style modifications */
+html.light header {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  border-bottom-color: rgba(26, 71, 42, 0.1) !important;
+  box-shadow: 0 4px 15px rgba(26, 71, 42, 0.04) !important;
+}
+
+html.light header h1 {
+  color: #102d18 !important;
+}
+
+html.light header span.text-white,
+html.light header div.text-white {
+  color: #102d18 !important;
+}
+
+/* User profile block in header */
+html.light .user-profile {
+  background: rgba(26, 71, 42, 0.05) !important;
+  border: 1px solid rgba(26, 71, 42, 0.12) !important;
+}
+
+html.light .user-profile .text-white,
+html.light .user-profile .text-base {
+  color: #102d18 !important;
+}
+
+html.light .user-profile .bg-zinc-800 {
+  background-color: rgba(26, 71, 42, 0.12) !important;
+}
+
+html.light .supporting-badge {
+  color: #ab7a00 !important;
+}
+
+/* Tabs */
+html.light #tab_navigator_bar {
+  background-color: rgba(26, 71, 42, 0.05) !important;
+  border-color: rgba(26, 71, 42, 0.12) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02) !important;
+}
+
+html.light #tab_navigator_bar button {
+  color: #235030 !important;
+}
+
+html.light #tab_navigator_bar button:hover {
+  color: #102d18 !important;
+}
+
+html.light #tab_navigator_bar button.text-zinc-950,
+html.light #tab_navigator_bar button.bg-\[\#ffb703\] {
+  background-color: #ffb703 !important;
+  color: #102d18 !important;
+}
+
+/* Cards & Containers general */
+html.light #login_card,
+html.light #admin_sync_panel,
+html.light #predictions_dashboard_container > div,
+html.light .fixtures-container-theme {
+  background-color: #ffffff !important;
+  border-color: rgba(26, 71, 42, 0.12) !important;
+  color: #102d18 !important;
+  box-shadow: 0 10px 25px -5px rgba(26, 71, 42, 0.03), 0 8px 10px -6px rgba(26, 71, 42, 0.03) !important;
+}
+
+html.light #fixtures_filter_panel {
+  background-color: rgba(26, 71, 42, 0.03) !important;
+  border-color: rgba(26, 71, 42, 0.08) !important;
+}
+
+html.light #admin_sync_panel p.text-white\/70 {
+  color: #235030 !important;
+}
+
+html.light .text-white {
+  color: #102d18 !important;
+}
+
+html.light .text-white\/75,
+html.light .text-white\/70,
+html.light .text-zinc-400 {
+  color: #235030 !important;
+}
+
+html.light .text-white\/50,
+html.light .text-white\/45,
+html.light .text-white\/40,
+html.light .text-zinc-500 {
+  color: #51755a !important;
+}
+
+/* Form Inputs & Selects dropdown elements */
+html.light input,
+html.light select,
+html.light #select_player_dropdown,
+html.light #filter_team_input,
+html.light #filter_date_select {
+  background-color: #f7faf8 !important;
+  color: #102d18 !important;
+  border-color: rgba(26, 71, 42, 0.16) !important;
+  placeholder-color: #51755a !important;
+}
+
+html.light input:focus,
+html.light select:focus {
+  border-color: #ffb703 !important;
+}
+
+html.light option {
+  background-color: #ffffff !important;
+  color: #102d18 !important;
+}
+
+/* Fixture Match Cards list */
+html.light .fixtures-container-theme > div {
+  background-color: #fcfdfe !important;
+  border-color: rgba(26, 71, 42, 0.1) !important;
+  color: #102d18 !important;
+}
+
+html.light .fixtures-container-theme > div:hover {
+  background-color: #f6faf7 !important;
+  border-color: rgba(26, 71, 42, 0.2) !important;
+}
+
+/* Fixtures list inner borders and rules */
+html.light .fixtures-container-theme > div div.border-b {
+  border-bottom-color: rgba(26, 71, 42, 0.08) !important;
+}
+
+html.light .fixtures-container-theme > div div.border-t {
+  border-top-color: rgba(26, 71, 42, 0.08) !important;
+}
+
+html.light .fixtures-container-theme > div span.text-white\/60 {
+  color: #235030 !important;
+}
+
+html.light .fixtures-container-theme > div span.text-white {
+  color: #102d18 !important;
+}
+
+/* Match Completed & Locked cards colors */
+html.light .fixtures-container-theme > div.bg-black\/40 {
+  background-color: #f2f6f3 !important;
+  border-color: rgba(26, 71, 42, 0.08) !important;
+}
+
+html.light .fixtures-container-theme > div.bg-black\/30 {
+  background-color: #edf2ee !important;
+  border-color: rgba(26, 71, 42, 0.06) !important;
+  opacity: 0.9 !important;
+}
+
+/* Score prediction wrappers */
+html.light .fixtures-container-theme div.bg-black\/40 {
+  background-color: #edf2ee !important;
+  border-color: rgba(26, 71, 42, 0.1) !important;
+}
+
+html.light .fixtures-container-theme span.bg-black\/50 {
+  background-color: #edf2ee !important;
+  border-color: rgba(26, 71, 42, 0.1) !important;
+  color: #102d18 !important;
+}
+
+/* Supporting squad card pills */
+html.light .grid > div.bg-black\/35 {
+  background-color: #f7faf8 !important;
+  border-color: rgba(26, 71, 42, 0.1) !important;
+}
+
+html.light .grid > div.bg-black\/35 span.text-white {
+  color: #102d18 !important;
+}
+
+/* Increment/Decrement buttons of Score boxes */
+html.light .fixtures-container-theme button.bg-zinc-800 {
+  background-color: #edf2ee !important;
+  border-color: rgba(26, 71, 42, 0.15) !important;
+  color: #102d18 !important;
+}
+
+html.light .fixtures-container-theme button.bg-zinc-800:hover {
+  background-color: #cfdfd4 !important;
+  color: #102d18 !important;
+}
+
+html.light .fixtures-container-theme button.bg-zinc-800:disabled {
+  opacity: 0.5;
+}
+
+/* Draft button in fixture card */
+html.light .fixtures-container-theme button.bg-zinc-800:not(.w-5) {
+  background-color: #edf2ee !important;
+  border-color: rgba(26, 71, 42, 0.15) !important;
+  color: #102d18 !important;
+}
+
+html.light .fixtures-container-theme button.bg-zinc-800:not(.w-5):hover {
+  background-color: #dbe7df !important;
+}
+
+/* Gold Trophy and Fave Badges accessibility improvements */
+html.light .bg-\[\#ffb703\]\/20 {
+  background-color: rgba(255, 183, 3, 0.12) !important;
+  color: #ab7a00 !important;
+  border-color: rgba(255, 183, 3, 0.3) !important;
+}
+
+/* Leaderboard custom stylings */
+html.light #leaderboard_scroll_viewport {
+  background-color: #ffffff !important;
+  border-color: rgba(26, 71, 42, 0.12) !important;
+}
+
+html.light #leaderboard_scroll_viewport table thead tr {
+  background-color: rgba(26, 71, 42, 0.05) !important;
+  color: #1a472a !important;
+  border-bottom-color: rgba(26, 71, 42, 0.15) !important;
+}
+
+html.light #leaderboard_scroll_viewport table tbody tr {
+  color: #102d18 !important;
+  border-bottom-color: rgba(26, 71, 42, 0.06) !important;
+}
+
+html.light #leaderboard_scroll_viewport table tbody tr td div.bg-black\/40 {
+  background-color: #edf2ee !important;
+  border-color: rgba(26, 71, 42, 0.12) !important;
+}
+
+html.light #leaderboard_scroll_viewport table tbody tr td span.bg-black\/30 {
+  background-color: #edf2ee !important;
+  border-color: rgba(26, 71, 42, 0.12) !important;
+  color: #102d18 !important;
+}
+
+html.light #leaderboard_scroll_viewport table tbody tr td span.text-\[\#ffb703\]\/90 {
+  color: #ab7a00 !important;
+}
+
+html.light #leaderboard_scroll_viewport table tbody tr.bg-\[\#ffb703\]\/5 {
+  background-color: rgba(255, 183, 3, 0.1) !important;
+  color: #ab7a00 !important;
+}
+
+html.light #leaderboard_scroll_viewport table tbody tr.bg-\[\#ffb703\]\/5 span.text-white {
+  color: #ab7a00 !important;
+}
+
+html.light #leaderboard_scroll_viewport table tbody tr.bg-\[\#ffb703\]\/5 td {
+  color: #ab7a00 !important;
+}
+
+html.light #leaderboard_scroll_viewport table tbody tr.bg-\[\#ffb703\]\/5 span.text-white\/90,
+html.light #leaderboard_scroll_viewport table tbody tr.bg-\[\#ffb703\]\/5 span.text-\[\#ffb703\] {
+  color: #8f6600 !important;
+}
+
+/* Locked status in standings */
+html.light #leaderboard_scroll_viewport span.text-white\/60 {
+  color: #51755a !important;
+}
+
+html.light .status-locked {
+  background: rgba(0, 0, 0, 0.06) !important;
+  color: #51755a !important;
+  border-color: rgba(26, 71, 42, 0.12) !important;
+}
+
+html.light .status-open {
+  background: rgba(16, 185, 129, 0.08) !important;
+  color: #059669 !important;
+  border-color: rgba(16, 185, 129, 0.25) !important;
+}
+
+/* Footer & other secondary text fields styling */
+html.light footer {
+  border-top-color: rgba(26, 71, 42, 0.1) !important;
+  color: #51755a !important;
 }

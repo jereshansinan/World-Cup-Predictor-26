@@ -6,7 +6,7 @@ import { seedInitialData } from './firebaseUtils';
 import { Login } from './components/Login';
 import { Dashboard } from './components/Dashboard';
 import { Leaderboard } from './components/Leaderboard';
-import { Trophy, LogOut, Radio, User, Loader2 } from 'lucide-react';
+import { Trophy, LogOut, Radio, User, Loader2, Sun, Moon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { TEAM_FLAGS, getTeamFlagUrl } from './utils';
 
@@ -15,6 +15,21 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'leaderboard'>('dashboard');
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    return (localStorage.getItem('theme') as 'dark' | 'light') || 'dark';
+  });
+
+  // Handle document class toggles on theme state changes
+  useEffect(() => {
+    if (theme === 'light') {
+      document.documentElement.classList.add('light');
+      localStorage.setItem('theme', 'light');
+    } else {
+      document.documentElement.classList.remove('light');
+      localStorage.setItem('theme', 'dark');
+    }
+  }, [theme]);
 
   // 1. Initial Seeding of Database if empty on App load
   useEffect(() => {
@@ -125,6 +140,8 @@ export default function App() {
         onLoginSuccess={(profile) => {
           setCurrentUserProfile(profile);
         }} 
+        theme={theme}
+        setTheme={setTheme}
       />
     );
   }
@@ -179,6 +196,30 @@ export default function App() {
                 </div>
               </div>
             </div>
+
+            {/* Theme Toggle option */}
+            <button
+              onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+              className={`px-3 py-2 border rounded-xl transition cursor-pointer flex items-center gap-1.5 text-xs font-semibold uppercase font-display leading-none ${
+                theme === 'light' 
+                  ? 'bg-zinc-100 hover:bg-zinc-200 border-zinc-200 text-zinc-800' 
+                  : 'bg-zinc-900/60 hover:bg-zinc-800 border-white/10 text-white'
+              }`}
+              title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+              id="theme_toggle_header_btn"
+            >
+              {theme === 'light' ? (
+                <>
+                  <Moon className="w-3.5 h-3.5 text-zinc-900" />
+                  <span>Dark Mode</span>
+                </>
+              ) : (
+                <>
+                  <Sun className="w-3.5 h-3.5 text-[#ffb703]" />
+                  <span>Light Mode</span>
+                </>
+              )}
+            </button>
 
             {/* Logout button */}
             <button

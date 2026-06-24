@@ -49,6 +49,76 @@ export async function seedInitialData() {
     const usersSnap = await getDocs(collection(db, usersPath));
     const predictionsSnap = await getDocs(collection(db, predictionsPath));
 
+    // If matches and users are already seeded, skip to avoid quota exhaustion and overwriting manual scores.
+    if (matchesSnap.size > 0 && usersSnap.size > 0) {
+      console.log('Database matches and users are already seeded. Checking if we need to backfill predictions...');
+      const testDocRef = doc(db, predictionsPath, 'sanjay_m45');
+      const testDocSnap = await getDoc(testDocRef);
+      if (testDocSnap.exists()) {
+        console.log('Predictions for new matches are already backfilled. Skipping initial seed to conserve Firestore quota.');
+        return;
+      }
+      
+      console.log('Backfilling predictions for matches m45, m46, m47, m48...');
+      const backfillBatch = writeBatch(db);
+      const targetMatchIds = ['m45', 'm46', 'm47', 'm48'];
+      
+      // Also make sure the matches exist in Firestore!
+      for (const mId of targetMatchIds) {
+        const matchObj = SEED_MATCHES.find(m => m.id === mId);
+        if (matchObj) {
+          const matchDocRef = doc(db, matchesPath, mId);
+          backfillBatch.set(matchDocRef, {
+            id: mId,
+            homeTeam: matchObj.homeTeam,
+            awayTeam: matchObj.awayTeam,
+            matchDate: matchObj.matchDate,
+            status: 'upcoming',
+            homeScoreActual: null,
+            awayScoreActual: null
+          }, { merge: true });
+        }
+      }
+
+      // Add the predictions for these matches
+      for (const item of SEED_PREDICTIONS) {
+        if (!targetMatchIds.includes(item.matchId)) continue;
+        
+        for (const [userName, predStr] of Object.entries(item.predictions)) {
+          const userId = userName.toLowerCase();
+          const predictionId = `${userId}_${item.matchId}`;
+          const predDocRef = doc(db, predictionsPath, predictionId);
+
+          let homeScorePredicted: number | null = null;
+          let awayScorePredicted: number | null = null;
+          let isInitiallyLocked = false;
+
+          if (predStr && predStr !== 'null') {
+            const parts = predStr.split('-');
+            if (parts.length === 2) {
+              homeScorePredicted = parseInt(parts[0], 10);
+              awayScorePredicted = parseInt(parts[1], 10);
+              isInitiallyLocked = true;
+            }
+          }
+
+          backfillBatch.set(predDocRef, {
+            id: predictionId,
+            userId: userId,
+            matchId: item.matchId,
+            homeScorePredicted,
+            awayScorePredicted,
+            pointsEarned: null,
+            locked: isInitiallyLocked
+          });
+        }
+      }
+      
+      await backfillBatch.commit();
+      console.log('Backfilled predictions for m45-m48 successfully!');
+      return;
+    }
+
     const seedMatchIds = new Set(SEED_MATCHES.map((m) => m.id));
     const seedUserIds = new Set(SEED_USERS.map((u) => u.name.toLowerCase()));
     
@@ -63,9 +133,9 @@ export async function seedInitialData() {
     const matchesBatch = writeBatch(db);
     let matchesBatchSize = 0;
 
-    const existingMatchIds = new Set<string>();
+    const existingMatchesData = new Map<string, any>();
     matchesSnap.forEach((docSnap) => {
-      existingMatchIds.add(docSnap.id);
+      existingMatchesData.set(docSnap.id, docSnap.data());
     });
 
     // Delete matches not in seed
@@ -79,15 +149,30 @@ export async function seedInitialData() {
     // Upsert matches in seed (with merge to ensure correct scores and status are loaded)
     for (const match of SEED_MATCHES) {
       const matchDocRef = doc(db, matchesPath, match.id);
+      const existing = existingMatchesData.get(match.id);
       const staticResult = MATCH_ACTUAL_RESULTS[match.id];
+
+      // Keep real updated status and score from DB if they exist and are completed/set
+      const status = (existing && (existing.status === 'finished' || existing.homeScoreActual !== null))
+        ? existing.status
+        : (staticResult ? 'finished' : 'upcoming');
+
+      const homeScoreActual = (existing && (existing.status === 'finished' || existing.homeScoreActual !== null))
+        ? existing.homeScoreActual
+        : (staticResult ? staticResult.home : null);
+
+      const awayScoreActual = (existing && (existing.status === 'finished' || existing.awayScoreActual !== null))
+        ? existing.awayScoreActual
+        : (staticResult ? staticResult.away : null);
+
       matchesBatch.set(matchDocRef, {
         id: match.id,
         homeTeam: match.homeTeam,
         awayTeam: match.awayTeam,
         matchDate: match.matchDate,
-        status: staticResult ? 'finished' : 'upcoming',
-        homeScoreActual: staticResult ? staticResult.home : null,
-        awayScoreActual: staticResult ? staticResult.away : null
+        status,
+        homeScoreActual,
+        awayScoreActual
       }, { merge: true });
       matchesBatchSize++;
     }
@@ -289,10 +374,14 @@ export async function syncScoresAndPoints(): Promise<any> {
     for (const matchId of Object.keys(dbMatches)) {
       const dbMatch = dbMatches[matchId];
 
-      // If the match in the database is already finished, do NOT edit or update it!
+      // If the match in the database is already finished or has manual actual scores set, do NOT edit or update it!
       // This protects manual corrections the admin makes directly in the Firestore database.
-      if (dbMatch.status === 'finished') {
-        console.log(`Skipping sync update for already finished/previous match: ${matchId}`);
+      if (dbMatch.status === 'finished' || (dbMatch.homeScoreActual !== null && dbMatch.homeScoreActual !== undefined)) {
+        console.log(`Skipping sync update for completed/manually-set match: ${matchId}`);
+        if (dbMatch.status !== 'finished') {
+          updatedMatchesBatch.update(doc(db, matchesPath, matchId), { status: 'finished' });
+          dbMatches[matchId].status = 'finished';
+        }
         continue;
       }
 

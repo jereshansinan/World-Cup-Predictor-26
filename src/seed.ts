@@ -428,6 +428,38 @@ export const SEED_PREDICTIONS: SeedPrediction[] = [
       Thapedi: '1-2', Fikile: '0-1', Jereshan: '0-1', Happy: '2-3', Alone: '1-3',
       Dylan: '0-1', Nandipha: '2-0'
     }
+  },
+  {
+    matchId: 'm45',
+    predictions: {
+      Sanjay: '2-0', Janita: '3-0', Hlaisani: '2-0', Vuyolwethu: '3-0', Thapedi: '2-0',
+      Fikile: '3-0', Jereshan: '2-0', Happy: '2-1', Alone: '2-0', Dylan: '2-0',
+      Nandipha: '2-0', Tlamelo: '3-0'
+    }
+  },
+  {
+    matchId: 'm46',
+    predictions: {
+      Sanjay: '4-1', Janita: '2-1', Hlaisani: '3-1', Vuyolwethu: '2-0', Thapedi: '3-0',
+      Fikile: '2-1', Jereshan: '3-0', Happy: '3-0', Alone: '5-1', Dylan: '2-0',
+      Nandipha: '3-1', Tlamelo: '2-1'
+    }
+  },
+  {
+    matchId: 'm47',
+    predictions: {
+      Sanjay: '0-2', Janita: '0-2', Hlaisani: '0-1', Vuyolwethu: '0-3', Thapedi: '1-2',
+      Fikile: '0-2', Jereshan: '0-2', Happy: '0-2', Alone: '1-2', Dylan: '1-2',
+      Nandipha: '0-2', Tlamelo: '2-0'
+    }
+  },
+  {
+    matchId: 'm48',
+    predictions: {
+      Sanjay: '2-1', Janita: '3-1', Hlaisani: '2-1', Vuyolwethu: '1-0', Thapedi: '2-1',
+      Fikile: '3-1', Jereshan: '3-1', Happy: '2-0', Alone: '2-2', Dylan: '2-1',
+      Nandipha: '1-1', Tlamelo: '2-1'
+    }
   }
 ];
 

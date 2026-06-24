@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Trophy, Loader2, User } from 'lucide-react';
+import { Trophy, Loader2, User, Sun, Moon } from 'lucide-react';
 import { loginByProfile } from '../firebaseUtils';
 import { SEED_USERS } from '../seed';
 
 interface LoginProps {
   onLoginSuccess: (userProfile: any) => void;
+  theme: 'dark' | 'light';
+  setTheme: (theme: 'dark' | 'light') => void;
 }
 
-export function Login({ onLoginSuccess }: LoginProps) {
+export function Login({ onLoginSuccess, theme, setTheme }: LoginProps) {
   const [selectedUser, setSelectedUser] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -45,6 +47,20 @@ export function Login({ onLoginSuccess }: LoginProps) {
         className="w-full max-w-md bg-zinc-950/95 border border-white/10 rounded-2xl shadow-[0_24px_48px_rgba(0,0,0,0.6)] p-6 sm:p-8 backdrop-blur-lg relative z-10"
         id="login_card"
       >
+        {/* Theme Toggle Button inside Login page */}
+        <button
+          type="button"
+          onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+          className={`absolute top-4 right-4 p-2 rounded-xl border transition cursor-pointer z-50 ${
+            theme === 'light'
+              ? 'bg-zinc-100 hover:bg-zinc-200 border-zinc-200 text-zinc-800 shadow-sm'
+              : 'bg-zinc-900/60 hover:bg-zinc-800 border-white/10 text-white'
+          }`}
+          title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+          id="login_theme_toggle_btn"
+        >
+          {theme === 'light' ? <Moon className="w-4 h-4 text-zinc-800" /> : <Sun className="w-4 h-4 text-[#ffb703]" />}
+        </button>
         {/* Flag Ribbons Decorative Top Accent */}
         <div className="absolute -top-1 left-4 right-4 flex justify-between h-2 gap-1 overflow-hidden rounded-full">
           <div className="flex-1 bg-[#e63946]"></div>
